@@ -3,14 +3,13 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.alex1304</groupId>
-	<artifactId>rservice</artifactId>
+	<artifactId>rdi</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<name>RService</name>
+	<name>RDI</name>
 	<url>http://maven.apache.org</url>
 
-	<description>A simple service container supporting reactive dependency
-		injection, powered by Reactor.</description>
+	<description>Dependency Injection library with reactive capabilities, powered by Reactor.</description>
 
 	<licenses>
 		<license>
@@ -28,10 +27,10 @@
 	</developers>
 
 	<scm>
-		<url>https://github.com/Alex1304/rservice/tree/master</url>
-		<connection>scm:git:git://github.com/Alex1304/rservice.git
+		<url>https://github.com/Alex1304/rdi/tree/master</url>
+		<connection>scm:git:git://github.com/Alex1304/rdi.git
 		</connection>
-		<developerConnection>scm:git:ssh://git@github.com/Alex1304/rservice.git
+		<developerConnection>scm:git:ssh://git@github.com/Alex1304/rdi.git
 		</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
@@ -49,7 +48,7 @@
 	</distributionManagement>
 
 	<properties>
-		<java.version>11</java.version>
+		<java.version>8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -107,7 +106,7 @@
 					<dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
 					<injectAllReactorProjects>true</injectAllReactorProjects>
 					<generateGitPropertiesFile>true</generateGitPropertiesFile>
-					<generateGitPropertiesFilename>${project.build.outputDirectory}/META-INF/git/rservice.git.properties
+					<generateGitPropertiesFilename>${project.build.outputDirectory}/META-INF/git/rdi.git.properties
 					</generateGitPropertiesFilename>
 				</configuration>
 			</plugin>
@@ -169,6 +168,20 @@
 			<groupId>io.projectreactor</groupId>
 			<artifactId>reactor-core</artifactId>
 			<version>3.3.7.RELEASE</version>
+		</dependency>
+		
+		<!-- TEST -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.4.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.30</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

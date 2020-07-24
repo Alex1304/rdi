@@ -1,2 +1,2 @@
-# RService
-A simple service container supporting reactive dependency injection, powered by Reactor.
+# Reactive Dependency Injection (RDI)
+Dependency Injection library with reactive capabilities, powered by Reactor.
