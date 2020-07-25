@@ -1,4 +1,4 @@
-package com.github.alex1304.rservice.internal;
+package com.github.alex1304.rdi.internal;
 
 import java.lang.invoke.MethodHandle;
 import java.util.List;

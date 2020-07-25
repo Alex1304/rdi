@@ -1,9 +1,9 @@
-package com.github.alex1304.rservice.internal;
+package com.github.alex1304.rdi.internal;
 
 import java.util.Map;
 
-import com.github.alex1304.rservice.RdiServiceContainer;
-import com.github.alex1304.rservice.RdiServiceNotFoundException;
+import com.github.alex1304.rdi.RdiServiceContainer;
+import com.github.alex1304.rdi.RdiServiceNotFoundException;
 
 import reactor.core.publisher.Mono;
 

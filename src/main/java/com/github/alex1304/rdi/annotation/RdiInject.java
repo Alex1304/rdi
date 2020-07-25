@@ -1,4 +1,4 @@
-package com.github.alex1304.rservice.annotation;
+package com.github.alex1304.rdi.annotation;
 
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.METHOD;

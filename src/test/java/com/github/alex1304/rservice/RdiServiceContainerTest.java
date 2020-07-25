@@ -13,8 +13,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.github.alex1304.rservice.annotation.RdiInject;
-import com.github.alex1304.rservice.annotation.RdiSingleton;
+import com.github.alex1304.rdi.RdiServiceContainer;
+import com.github.alex1304.rdi.annotation.RdiInject;
+import com.github.alex1304.rdi.annotation.RdiSingleton;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;

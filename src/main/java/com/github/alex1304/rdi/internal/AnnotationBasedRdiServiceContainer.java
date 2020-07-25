@@ -1,4 +1,4 @@
-package com.github.alex1304.rservice.internal;
+package com.github.alex1304.rdi.internal;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.github.alex1304.rservice.annotation.RdiInject;
-import com.github.alex1304.rservice.annotation.RdiSingleton;
+import com.github.alex1304.rdi.annotation.RdiInject;
+import com.github.alex1304.rdi.annotation.RdiSingleton;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.FluxSink;

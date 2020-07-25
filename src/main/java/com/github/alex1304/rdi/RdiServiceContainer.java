@@ -1,6 +1,6 @@
-package com.github.alex1304.rservice;
+package com.github.alex1304.rdi;
 
-import com.github.alex1304.rservice.internal.AnnotationBasedRdiServiceContainer;
+import com.github.alex1304.rdi.internal.AnnotationBasedRdiServiceContainer;
 
 import reactor.core.publisher.Mono;
 
