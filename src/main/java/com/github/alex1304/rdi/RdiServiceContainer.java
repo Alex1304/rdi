@@ -1,21 +1,24 @@
 package com.github.alex1304.rdi;
 
-import com.github.alex1304.rdi.internal.AnnotationBasedRdiServiceContainer;
+import com.github.alex1304.rdi.config.RdiConfig;
+import com.github.alex1304.rdi.resolver.DependencyResolver;
 
 import reactor.core.publisher.Mono;
 
 public interface RdiServiceContainer {
 
 	/**
-	 * Gets the service for the given class.
+	 * Gets the service for the given reference.
 	 * 
 	 * @param <S>          the type of service
-	 * @param serviceClass the service class
+	 * @param serviceRef the service reference
 	 * @return a Mono emitting the Service instance
 	 */
-	<S> Mono<S> getService(Class<S> serviceClass);
+	<S> Mono<S> getService(ServiceReference<S> serviceRef);
 	
-	static RdiServiceContainer annotationBased(Class<?>... annotatedClasses) {
-		return AnnotationBasedRdiServiceContainer.create(annotatedClasses);
+	public static RdiServiceContainer create(RdiConfig config) {
+		return new DefaultRdiServiceContainer(
+				DependencyResolver.resolve(
+						config.getServiceDescriptors()));
 	}
 }
