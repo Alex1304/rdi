@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.github.alex1304.rdi.RdiException;
+
 public class RdiConfig {
 	
 	private final Set<ServiceDescriptor> serviceDescriptors;
@@ -29,7 +31,7 @@ public class RdiConfig {
 		public Builder registerService(ServiceDescriptor serviceDescriptor) {
 			requireNonNull(serviceDescriptor);
 			if (!serviceDescriptors.add(serviceDescriptor)) {
-				throw new RuntimeException("Duplicate service registered: "
+				throw new RdiException("Duplicate service registered: "
 						+ serviceDescriptor.getServiceReference());
 			}
 			return this;

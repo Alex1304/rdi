@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.alex1304.rdi.RdiException;
 import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
 import com.github.alex1304.rdi.config.SetterMethod;
@@ -37,29 +38,30 @@ public class DependencyResolver {
 				.collect(Collectors.toMap(rctx -> rctx.getReference(), Function.identity()));
 		Queue<ServiceReference<?>> stack = Collections.asLifoQueue(new ArrayDeque<>());
 		HashSet<ServiceReference<?>> circularFactoryDepDetector = new HashSet<>();
-		Map<RefWithParent, CircularInstantiationDetector> instHierarchy = new ConcurrentHashMap<>();
+		Map<RefWithParent, CircularInstantiationDetector> instantiationChains = new ConcurrentHashMap<>();
 		stack.addAll(resolutionContextByRef.keySet());
 		while (!stack.isEmpty()) {
 			ResolutionContext rctx = resolutionContextByRef.get(stack.remove());
-			switch (rctx.step) {
+			switch (rctx.getStep()) {
 				case DONE: continue;
 				case RESOLVING_FACTORY: {
 					stack.add(rctx.getReference());
 					ResolutionResult factoryResolution = ResolutionResult.compute(
-							rctx.descriptor.getFactoryMethod().getInjectables().stream()
+							rctx.getReference(),
+							rctx.getDescriptor().getFactoryMethod().getInjectableParameters().stream()
 									.flatMap(inj -> inj.getReference().map(Stream::of).orElse(Stream.empty()))
 									.collect(Collectors.toList()),
 							resolutionContextByRef);
 					if (factoryResolution.isFullyResolved()) {
 						circularFactoryDepDetector.remove(rctx.getReference());
-						createMono(rctx, factoryResolution, instHierarchy);
-						rctx.step = Step.RESOLVING_SETTERS;
+						createMono(rctx, factoryResolution, instantiationChains);
+						rctx.setStep(ResolutionStep.RESOLVING_SETTERS);
 					} else {
 						factoryResolution.getUnresolved().forEach(u -> {
 							if (!circularFactoryDepDetector.add(u)) {
-								String a = rctx.getReference().getServiceName();
-								String b = u.getServiceName();
-								throw new IllegalStateException("Circular dependency detected: service '" + a + "' needs '" + b
+								String a = rctx.getReference().toString();
+								String b = u.toString();
+								throw new RdiException("Circular dependency detected: service '" + a + "' needs '" + b
 										+ "' to be instantiated and '" + b + "' needs '" + a + "' to be instantiated.");
 							}
 							stack.add(u);
@@ -69,16 +71,17 @@ public class DependencyResolver {
 				}
 				case RESOLVING_SETTERS: {
 					ResolutionResult setterResolution = ResolutionResult.compute(
-							rctx.descriptor.getSetterMethods().stream()
-									.map(SetterMethod::getInjectable)
+							rctx.getReference(),
+							rctx.getDescriptor().getSetterMethods().stream()
+									.map(SetterMethod::getInjectableParameter)
 									.flatMap(inj -> inj.getReference().map(Stream::of).orElse(Stream.empty()))
 									.collect(Collectors.toList()),
 							resolutionContextByRef);
 					if (setterResolution.isFullyResolved()) {
-						if (!setterResolution.hasNoDeps()) {
+						if (!rctx.getDescriptor().getSetterMethods().isEmpty()) {
 							enrichMonoWithSetterResolution(rctx, setterResolution);
 						}
-						rctx.step = Step.DONE;
+						rctx.setStep(ResolutionStep.DONE);
 					} else {
 						stack.add(rctx.getReference());
 						stack.addAll(setterResolution.getUnresolved());
@@ -88,29 +91,29 @@ public class DependencyResolver {
 				default: throw new AssertionError();
 			}
 		}
-		enrichMonoWithSetterDelegation(resolutionContextByRef);
+		finalizeMonoAssembly(resolutionContextByRef);
 		return resolutionContextByRef.entrySet().stream()
-				.collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().mono));
+				.collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getMono()));
 	}
 	
 	private static void createMono(ResolutionContext rctx, ResolutionResult factoryResolution,
-			Map<RefWithParent, CircularInstantiationDetector> instHierarchy) {
-		rctx.mono = Mono.deferWithContext(ctx -> {
+			Map<RefWithParent, CircularInstantiationDetector> instantiationChains) {
+		rctx.setMono(Mono.deferWithContext(ctx -> {
 			checkCircularInstantiation(rctx.getReference(),
 					ctx.getOrDefault("parent", null),
 					ctx.getOrDefault("grandParent", null),
-					instHierarchy);
+					instantiationChains);
 			if (factoryResolution.hasNoDeps()) {
-				return rctx.descriptor.getFactoryMethod().invoke();
+				return rctx.getDescriptor().getFactoryMethod().invoke();
 			} else {
 				return Mono.zip(factoryResolution.getResolved().stream()
-								.map(rctx0 -> putParentInSubscriberContext(rctx0.mono, ctx, rctx.getReference()))
+								.map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx, rctx.getReference()))
 								.collect(Collectors.toList()), Function.identity())
-						.flatMap(rctx.descriptor.getFactoryMethod()::invoke);
+						.flatMap(rctx.getDescriptor().getFactoryMethod()::invoke);
 			}
-		});
-		if (rctx.descriptor.isSingleton()) {
-			rctx.mono = wrapSingleton(rctx);
+		}));
+		if (rctx.getDescriptor().isSingleton()) {
+			rctx.setMono(wrapSingleton(rctx));
 		}
 	}
 
@@ -118,51 +121,61 @@ public class DependencyResolver {
 		AtomicBoolean lock = new AtomicBoolean();
 		ReplayProcessor<Long> lockNotifier = ReplayProcessor.cacheLastOrDefault(0L);
 		FluxSink<Long> sink = lockNotifier.sink(FluxSink.OverflowStrategy.LATEST);
-		return lockNotifier.filter(__ -> lock.compareAndSet(false, true))
+		Mono<Object> factoryMono = rctx.getMono();
+		return Mono.deferWithContext(ctx -> lockNotifier.filter(__ -> lock.compareAndSet(false, true))
 				.next()
 				.flatMap(__ -> {
-					Object o = rctx.singleton;
+					Object o = rctx.getSingleton();
 					if (o != null) {
+						AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
+						isFreshInstance.set(false);
 						return Mono.just(o);
 					}
-					return rctx.mono.doOnNext(newInstance -> rctx.singleton = newInstance);
+					return factoryMono.doOnNext(rctx::setSingleton);
 				})
 				.doFinally(__ -> {
 					lock.set(false); // unlock
 					sink.next(0L); // notify those waiting on lock
-				});
+				}));
 	}
 	
 	private static void enrichMonoWithSetterResolution(ResolutionContext rctx, ResolutionResult setterResolution) {
-		rctx.mono = rctx.mono
+		rctx.setMono(rctx.getMono()
 				.flatMap(o -> Mono.deferWithContext(ctx -> {
+							AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
+							if (!isFreshInstance.get()) {
+								// If o isn't a fresh instance it means setters were already executed before, so skip
+								return Mono.empty();
+							}
 							Mono<Void> setterMono = Mono.zip(setterResolution.getResolved().stream()
-									.map(rctx0 -> putParentInSubscriberContext(rctx0.mono, ctx, rctx.getReference()))
+									.map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx, rctx.getReference()))
 									.collect(Collectors.toList()), Function.identity())
+									.switchIfEmpty(Mono.fromCallable(() -> new Object[0]))
 									.doOnNext(deps -> {
 										int refI = 0;
-										for (SetterMethod setter : rctx.descriptor.getSetterMethods()) {
-											if (setter.getInjectable().getValue().isPresent()) {
-												setter.invoke(o, setter.getInjectable().getValue().get());
-											} else { // Assumes that ref is present if value is not
+										for (SetterMethod setter : rctx.getDescriptor().getSetterMethods()) {
+											if (setter.getInjectableParameter().getValue().isPresent()) {
+												setter.invoke(o);
+											} else if (setter.getInjectableParameter().getReference().isPresent()) {
 												setter.invoke(o, deps[refI++]);
+											} else {
+												throw new AssertionError("Injectable.getValue() and "
+														+ "Injectable.getReference() were both empty");
 											}
 										}
 									})
 									.then();
 							ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
-							if (!setterDelegate.isEmpty()) {
-								setterDelegate.element().add(setterMono);
-								return Mono.empty();
-							}
-							return setterMono;
+							setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
+							return Mono.empty();
 						})
-						.thenReturn(o));
+						.thenReturn(o)));
 	}
 	
-	private static void enrichMonoWithSetterDelegation(Map<ServiceReference<?>, ResolutionContext> resolutionContextByRef) {
+	private static void finalizeMonoAssembly(Map<ServiceReference<?>, ResolutionContext> resolutionContextByRef) {
 		for (ResolutionContext rctx : resolutionContextByRef.values()) {
-			rctx.mono = rctx.mono
+			rctx.setMono(rctx.getMono()
+					// Assemble code to execute all setter delegates
 					.flatMap(o -> Mono.deferWithContext(ctx -> {
 								ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
 								List<Mono<Void>> setterMonos = setterDelegate.pop();
@@ -173,11 +186,13 @@ public class DependencyResolver {
 								return Mono.empty();
 							})
 							.thenReturn(o))
+					// Initialize subscriber context
 					.subscriberContext(ctx -> {
 						ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.getOrDefault("setterDelegate", new ArrayDeque<>());
 						setterDelegate.push(new ArrayList<>());
-						return ctx.put("setterDelegate", setterDelegate);
-					});
+						return ctx.put("setterDelegate", setterDelegate)
+								.put("isFreshInstance", new AtomicBoolean(true));
+					}));
 		}
 	}
 	
@@ -193,37 +208,17 @@ public class DependencyResolver {
 	}
 	
 	private static void checkCircularInstantiation(ServiceReference<?> ref, ServiceReference<?> parent, ServiceReference<?> grandParent,
-			Map<RefWithParent, CircularInstantiationDetector> instHierarchy) {
+			Map<RefWithParent, CircularInstantiationDetector> instantiationChains) {
 		RefWithParent parentRWP = new RefWithParent(grandParent, parent);
 		RefWithParent thisRWP = new RefWithParent(parent, ref);
-		CircularInstantiationDetector cid = instHierarchy.getOrDefault(parentRWP, new CircularInstantiationDetector());
+		CircularInstantiationDetector cid = instantiationChains.getOrDefault(parentRWP, new CircularInstantiationDetector());
 		Optional<CircularInstantiationDetector> nextCidOpt = cid.add(ref);
 		if (nextCidOpt.isPresent()) {
-			instHierarchy.put(thisRWP, nextCidOpt.get());
+			instantiationChains.put(thisRWP, nextCidOpt.get());
 		} else {
-			throw new IllegalStateException("Circular instantiation detected: " + ref
+			throw new RdiException("Circular instantiation detected: " + ref
 					+ " endlessly instantiates other services that instantiate this one in their turn. "
 					+ "Maybe declare " + ref + " as singleton?");
 		}
-	}
-	
-	static class ResolutionContext {
-		
-		private final ServiceDescriptor descriptor;
-		private Mono<Object> mono;
-		private Object singleton;
-		private Step step = Step.RESOLVING_FACTORY;
-		
-		public ResolutionContext(ServiceDescriptor descriptor) {
-			this.descriptor = descriptor;
-		}
-		
-		ServiceReference<?> getReference() {
-			return descriptor.getServiceReference();
-		}
-	}
-	
-	private static enum Step {
-		RESOLVING_FACTORY, RESOLVING_SETTERS, DONE;
 	}
 }

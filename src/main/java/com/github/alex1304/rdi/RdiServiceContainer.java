@@ -1,5 +1,7 @@
 package com.github.alex1304.rdi;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.alex1304.rdi.config.RdiConfig;
 import com.github.alex1304.rdi.resolver.DependencyResolver;
 
@@ -17,6 +19,7 @@ public interface RdiServiceContainer {
 	<S> Mono<S> getService(ServiceReference<S> serviceRef);
 	
 	public static RdiServiceContainer create(RdiConfig config) {
+		requireNonNull(config);
 		return new DefaultRdiServiceContainer(
 				DependencyResolver.resolve(
 						config.getServiceDescriptors()));

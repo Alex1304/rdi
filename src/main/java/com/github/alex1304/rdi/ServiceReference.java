@@ -1,5 +1,7 @@
 package com.github.alex1304.rdi;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 
 public class ServiceReference<T> {
@@ -13,11 +15,13 @@ public class ServiceReference<T> {
 	}
 	
 	public static <T> ServiceReference<T> of(String serviceName, Class<T> serviceClass) {
+		requireNonNull(serviceName);
+		requireNonNull(serviceClass);
 		return new ServiceReference<>(serviceName, serviceClass);
 	}
 	
 	public static <T> ServiceReference<T> ofType(Class<T> serviceClass) {
-		return new ServiceReference<>(serviceClass.getName(), serviceClass);
+		return of(serviceClass.getName(), serviceClass);
 	}
 
 	public String getServiceName() {
@@ -45,6 +49,6 @@ public class ServiceReference<T> {
 
 	@Override
 	public String toString() {
-		return "ServiceReference{serviceName=" + serviceName + ", serviceClass=" + serviceClass + "}";
+		return serviceName;
 	}
 }

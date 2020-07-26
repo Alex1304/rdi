@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.github.alex1304.rdi.ServiceReference;
 
@@ -68,14 +69,14 @@ public class ServiceDescriptor {
 	public static class Builder {
 		
 		private final ServiceReference<?> ref;
-		private boolean isSingleton;
-		private final FactoryMethod defaultFactoryMethod;
-		private FactoryMethod factoryMethod;
+		private boolean isSingleton = true;
+		private final Function<Class<?>, FactoryMethod> defaultFactoryMethod;
+		private Function<Class<?>, FactoryMethod> factoryMethod;
 		private final Set<SetterMethod> setterMethods = new HashSet<>();
 		
 		private Builder(ServiceReference<?> ref) {
 			this.ref = ref;
-			this.defaultFactoryMethod = FactoryMethod.constructor(ref.getServiceClass());
+			this.defaultFactoryMethod = FactoryMethod.constructor();
 			this.factoryMethod = defaultFactoryMethod;
 		}
 		
@@ -84,7 +85,7 @@ public class ServiceDescriptor {
 			return this;
 		}
 		
-		public Builder setFactoryMethod(@Nullable FactoryMethod factoryMethod) {
+		public Builder setFactoryMethod(@Nullable Function<Class<?>, FactoryMethod> factoryMethod) {
 			this.factoryMethod = factoryMethod == null ? defaultFactoryMethod : factoryMethod;
 			return this;
 		}
@@ -99,8 +100,8 @@ public class ServiceDescriptor {
 		}
 		
 		public ServiceDescriptor build() {
-			return new ServiceDescriptor(ref, isSingleton,
-					factoryMethod, Collections.unmodifiableSet(setterMethods));
+			return new ServiceDescriptor(ref, isSingleton, factoryMethod.apply(ref.getServiceClass()),
+					Collections.unmodifiableSet(setterMethods));
 		}
 	}
 }

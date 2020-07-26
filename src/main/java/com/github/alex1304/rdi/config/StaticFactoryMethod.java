@@ -13,7 +13,7 @@ class StaticFactoryMethod extends AbstractFactoryMethod {
 
 	@Override
 	MethodHandle findMethodHandle(Class<?> owner, String methodName, Class<?> returnType,
-			List<Class<?>> paramTypes) throws IllegalAccessException, NoSuchMethodException {
+			List<Class<?>> paramTypes) throws ReflectiveOperationException {
 		return MethodHandles.publicLookup().findStatic(owner, methodName, MethodType.methodType(returnType, paramTypes));
 	}
 }

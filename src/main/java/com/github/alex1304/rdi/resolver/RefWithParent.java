@@ -9,9 +9,9 @@ class RefWithParent {
 	private final ServiceReference<?> parent;
 	private final ServiceReference<?> element;
 	
-	RefWithParent(ServiceReference<?> parent, ServiceReference<?> node) {
+	RefWithParent(ServiceReference<?> parent, ServiceReference<?> element) {
 		this.parent = parent;
-		this.element = node;
+		this.element = element;
 	}
 
 	@Override

@@ -5,6 +5,8 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.Objects;
 
+import com.github.alex1304.rdi.RdiException;
+
 import reactor.core.Exceptions;
 
 public class SetterMethod {
@@ -23,13 +25,21 @@ public class SetterMethod {
 		this.methodHandle = prepareMethodHandle();
 	}
 	
-	public Injectable getInjectable() {
+	public Injectable getInjectableParameter() {
 		return param;
 	}
 	
 	public void invoke(Object instance, Object arg) {
 		try {
 			methodHandle.invoke(instance, arg);
+		} catch (Throwable t) {
+			throw Exceptions.propagate(t);
+		}
+	}
+	
+	public void invoke(Object instance) {
+		try {
+			methodHandle.invoke(instance);
 		} catch (Throwable t) {
 			throw Exceptions.propagate(t);
 		}
@@ -43,8 +53,8 @@ public class SetterMethod {
 				mh = MethodHandles.insertArguments(mh, 1, param.getValue().get());
 			}
 			return mh.asType(mh.type().generic());
-		} catch (IllegalAccessException | NoSuchMethodException e) {
-			throw new RuntimeException("Error when acquiring setter method '"
+		} catch (ReflectiveOperationException e) {
+			throw new RdiException("Error when acquiring setter method '"
 					+ setterName + "(" + param.getType().getName() + ")' for class " + owner.getName(), e);
 		}
 	}
@@ -63,5 +73,11 @@ public class SetterMethod {
 		SetterMethod other = (SetterMethod) obj;
 		return Objects.equals(owner, other.owner) && Objects.equals(param.getType(), other.param.getType())
 				&& Objects.equals(setterName, other.setterName);
+	}
+
+	@Override
+	public String toString() {
+		return "SetterMethod{owner=" + owner + ", setterName=" + setterName + ", returnType=" + returnType + ", param="
+				+ param + ", methodHandle=" + methodHandle + "}";
 	}
 }

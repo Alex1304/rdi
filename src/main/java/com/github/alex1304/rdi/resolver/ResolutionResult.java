@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.github.alex1304.rdi.RdiException;
 import com.github.alex1304.rdi.ServiceReference;
-import com.github.alex1304.rdi.resolver.DependencyResolver.ResolutionContext;
 
 class ResolutionResult {
 	
@@ -34,12 +34,18 @@ class ResolutionResult {
 		return Collections.unmodifiableList(unresolved);
 	}
 
-	static ResolutionResult compute(List<ServiceReference<?>> deps, Map<ServiceReference<?>, ResolutionContext> cache) {
+	static ResolutionResult compute(ServiceReference<?> owner, List<ServiceReference<?>> deps, Map<ServiceReference<?>, ResolutionContext> cache) {
 		ArrayList<ResolutionContext> resolved = new ArrayList<>();
 		ArrayList<ServiceReference<?>> unresolved = new ArrayList<>();
 		for (ServiceReference<?> dep : deps) {
-			if (cache.containsKey(dep)) {
-				resolved.add(cache.get(dep));
+			ResolutionContext rctx = cache.get(dep);
+			if (rctx == null) {
+				throw new RdiException("The service '" + owner.getServiceName()
+						+ "' is referring to missing service '" + dep.getServiceName()
+						+ "'. Did you forget to register '" + dep.getServiceName() + "' in the config?");
+			}
+			if (rctx.getMono() != null) {
+				resolved.add(rctx);
 			} else {
 				unresolved.add(dep);
 			}
