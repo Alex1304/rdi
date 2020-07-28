@@ -8,6 +8,12 @@ import java.util.Set;
 
 import com.github.alex1304.rdi.RdiException;
 
+/**
+ * Contains all the configuration to create a service container. It stores the
+ * metadata of each service necessary to achieve the dependency injection.
+ * 
+ * @see RdiConfig#builder()
+ */
 public class RdiConfig {
 	
 	private final Set<ServiceDescriptor> serviceDescriptors;
@@ -20,6 +26,11 @@ public class RdiConfig {
 		return serviceDescriptors;
 	}
 	
+	/**
+	 * Initializes a new {@link RdiConfig} builder.
+	 * 
+	 * @return a new builder
+	 */
 	public static Builder builder() {
 		return new Builder();
 	}
@@ -28,6 +39,13 @@ public class RdiConfig {
 		
 		private final Set<ServiceDescriptor> serviceDescriptors = new HashSet<>();
 		
+		/**
+		 * Registers a new {@link ServiceDescriptor} containing all the dependency
+		 * injection metadata for a particular service.
+		 * 
+		 * @param serviceDescriptor the service descriptor to register
+		 * @return this builder
+		 */
 		public Builder registerService(ServiceDescriptor serviceDescriptor) {
 			requireNonNull(serviceDescriptor);
 			if (!serviceDescriptors.add(serviceDescriptor)) {
@@ -37,6 +55,12 @@ public class RdiConfig {
 			return this;
 		}
 		
+		/**
+		 * Builds the {@link RdiConfig} instance with all the service descriptors
+		 * registered at the moment this method is invoked.
+		 * 
+		 * @return a new {@link RdiConfig} instance
+		 */
 		public RdiConfig build() {
 			return new RdiConfig(Collections.unmodifiableSet(serviceDescriptors));
 		}

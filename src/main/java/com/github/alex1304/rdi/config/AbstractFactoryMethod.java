@@ -4,10 +4,10 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import com.github.alex1304.rdi.RdiException;
 
@@ -55,7 +55,7 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
 
 	private MethodHandle prepareMethodHandle() {
 		List<Class<?>> paramTypes = new ArrayList<>();
-		Map<Integer, Object> values = new HashMap<>();
+		Map<Integer, Object> values = new TreeMap<>(Collections.reverseOrder());
 		int i = 0;
 		for (Injectable inj : params) {
 			paramTypes.add(inj.getType());

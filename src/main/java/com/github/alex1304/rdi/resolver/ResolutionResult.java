@@ -34,11 +34,12 @@ class ResolutionResult {
 		return Collections.unmodifiableList(unresolved);
 	}
 
-	static ResolutionResult compute(ServiceReference<?> owner, List<ServiceReference<?>> deps, Map<ServiceReference<?>, ResolutionContext> cache) {
+	static ResolutionResult compute(ServiceReference<?> owner, List<ServiceReference<?>> deps,
+			Map<ServiceReference<?>, ResolutionContext> resolutionContextByRef) {
 		ArrayList<ResolutionContext> resolved = new ArrayList<>();
 		ArrayList<ServiceReference<?>> unresolved = new ArrayList<>();
 		for (ServiceReference<?> dep : deps) {
-			ResolutionContext rctx = cache.get(dep);
+			ResolutionContext rctx = resolutionContextByRef.get(dep);
 			if (rctx == null) {
 				throw new RdiException("The service '" + owner.getServiceName()
 						+ "' is referring to missing service '" + dep.getServiceName()

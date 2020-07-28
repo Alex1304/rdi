@@ -1,6 +1,7 @@
 package com.github.alex1304.rdi;
 
 import static com.github.alex1304.rdi.config.FactoryMethod.constructor;
+import static com.github.alex1304.rdi.config.FactoryMethod.staticFactory;
 import static com.github.alex1304.rdi.config.Injectable.ref;
 import static com.github.alex1304.rdi.config.Injectable.value;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -17,6 +18,7 @@ import com.github.alex1304.rdi.config.RdiConfig;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
 
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -25,7 +27,7 @@ class RdiServiceContainerTest {
 	private static final ServiceReference<A> A = ServiceReference.of("A", A.class);
 	private static final ServiceReference<B> B = ServiceReference.of("B", B.class);
 	private static RdiConfig conf1, conf2, conf3, conf4, conf5, conf6,
-			conf7, conf8, conf9, conf10, conf11;
+			conf7, conf8, conf9, conf10, conf11, conf12;
 	
 	@BeforeAll
 	static void setUpBeforeClass() {
@@ -99,6 +101,13 @@ class RdiServiceContainerTest {
 						.setFactoryMethod(constructor(ref(B), value(1304)))
 						.build())
 				.registerService(ServiceDescriptor.builder(B).build())
+				.build();
+		conf12 = RdiConfig.builder()
+				.registerService(ServiceDescriptor.builder(B)
+						.setFactoryMethod(staticFactory("create", Mono.class,
+								value("test", String.class),
+								value(1304)))
+						.build())
 				.build();
 	}
 	
@@ -208,6 +217,15 @@ class RdiServiceContainerTest {
 		});
 	}
 	
+	@Test
+	void testBInjectsAViaStaticFactory() {
+		assertDoesNotThrow(() -> {
+			RdiServiceContainer cont = RdiServiceContainer.create(conf12);
+			B b = cont.getService(B).block();
+			assertNotNull(b);
+		});
+	}
+	
 	private static void logExpectedException(Logger logger, RdiException e) {
 		logger.info("RdiException thrown as expected with message: {}{}", e.getMessage(),
 				e.getCause() != null ? ", caused by " + e.getCause() : "");
@@ -253,10 +271,15 @@ class RdiServiceContainerTest {
 		}
 		
 		public B(A a) {
+			this.a = a;
 		}
 		
 		public void setA(A a) {
 			this.a = a;
+		}
+		
+		public static Mono<B> create(String value1, int value2) {
+			return Mono.fromCallable(() -> new B());
 		}
 	}
 }
