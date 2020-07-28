@@ -102,7 +102,7 @@ class CircularInstantiationDetector {
 			for (Chain c = this ; c != null ; c = c.previous) {
 				d.addFirst(c.ref.toString());
 			}
-			return "Chain{" + String.join(" => ", d) + "}";
+			return "[" + String.join(" => ", d) + "]";
 		}
 	}
 	

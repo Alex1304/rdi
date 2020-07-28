@@ -29,8 +29,8 @@ import reactor.util.Loggers;
 import reactor.util.context.Context;
 
 /**
- * Helper class to assemble the reactive chains to instantiate the services and
- * perform the dependency injection.
+ * Helper class to assemble the reactive chains instantiating the services and
+ * performing the dependency injection.
  * 
  * @see DependencyResolver#resolve(Set)
  */
@@ -75,7 +75,7 @@ public class DependencyResolver {
 							resolutionContextByRef);
 					if (factoryResolution.isFullyResolved()) {
 						if (LOGGER_ASSEMBLY.isDebugEnabled()) {
-							LOGGER_ASSEMBLY.debug("Resolved factory dependencies for {}: {}", rctx.getReference(), factoryResolution.getResolved()
+							logAssembly(rctx.getReference(), "Resolved factory dependencies: " + factoryResolution.getResolved()
 									.stream()
 									.map(ResolutionContext::getReference)
 									.collect(Collectors.toList()));
@@ -84,7 +84,6 @@ public class DependencyResolver {
 						createMono(rctx, factoryResolution, instantiationChains);
 						rctx.setStep(ResolutionStep.RESOLVING_SETTERS);
 					} else {
-						LOGGER_ASSEMBLY.debug("Discovered factory dependencies for {}: {}", rctx.getReference(), factoryResolution.getUnresolved());
 						factoryResolution.getUnresolved().forEach(u -> {
 							if (!circularFactoryDepDetector.add(u)) {
 								String a = rctx.getReference().toString();
@@ -107,7 +106,7 @@ public class DependencyResolver {
 							resolutionContextByRef);
 					if (setterResolution.isFullyResolved()) {
 						if (LOGGER_ASSEMBLY.isDebugEnabled()) {
-							LOGGER_ASSEMBLY.debug("Resolved setter dependencies for {}: {}", rctx.getReference(), setterResolution.getResolved()
+							logAssembly(rctx.getReference(), "Resolved setter dependencies: " + setterResolution.getResolved()
 									.stream()
 									.map(ResolutionContext::getReference)
 									.collect(Collectors.toList()));
@@ -117,7 +116,6 @@ public class DependencyResolver {
 						}
 						rctx.setStep(ResolutionStep.DONE);
 					} else {
-						LOGGER_ASSEMBLY.debug("Discovered setter dependencies for {}: {}", rctx.getReference(), setterResolution.getUnresolved());
 						stack.add(rctx.getReference());
 						stack.addAll(setterResolution.getUnresolved());
 					}
@@ -148,34 +146,35 @@ public class DependencyResolver {
 								.flatMap(rctx.getDescriptor().getFactoryMethod()::invoke);
 					}
 				})
-				.doOnNext(o -> LOGGER_SUBSCRIPTION.debug("New instance of {} created: {}", rctx.getReference())));
+				.doOnNext(o -> logSubscription(rctx.getReference(), o, "New instance created")));
 		if (rctx.getDescriptor().isSingleton()) {
 			rctx.setMono(wrapSingleton(rctx));
 		}
 	}
 
 	private static Mono<Object> wrapSingleton(ResolutionContext rctx) {
-		LOGGER_ASSEMBLY.debug("Wrapping {} in a singleton", rctx.getReference());
+		logAssembly(rctx.getReference(), "Wrapping in singleton");
 		AtomicBoolean lock = new AtomicBoolean();
 		ReplayProcessor<Long> lockNotifier = ReplayProcessor.cacheLastOrDefault(0L);
 		FluxSink<Long> sink = lockNotifier.sink(FluxSink.OverflowStrategy.LATEST);
 		Mono<Object> factoryMono = rctx.getMono();
 		return Mono.deferWithContext(ctx -> lockNotifier.filter(__ -> lock.compareAndSet(false, true))
 				.next()
+				.doOnSubscribe(s -> logSubscription(rctx.getReference(), null, "Waiting on singleton lock"))
 				.flatMap(__ -> {
-					LOGGER_SUBSCRIPTION.debug("Acquired singleton lock: {}", rctx.getReference());
+					logSubscription(rctx.getReference(), null, "Acquired singleton lock");
 					Object o = rctx.getSingleton();
 					if (o != null) {
-						LOGGER_SUBSCRIPTION.debug("Cached singleton instance found for {}: {}", rctx.getReference(), o);
+						logSubscription(rctx.getReference(), o, "Obtained cached singleton instance");
 						AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
 						isFreshInstance.set(false);
 						return Mono.just(o);
 					}
-					return factoryMono.doOnNext(rctx::setSingleton).doOnNext(newInstance -> LOGGER_SUBSCRIPTION
-							.debug("Instantiated singleton for {}, now caching: {}", rctx.getReference(), o));
+					return factoryMono.doOnNext(rctx::setSingleton).doOnNext(newInstance -> 
+							logSubscription(rctx.getReference(), newInstance, "Instantiated singleton, now caching"));
 				})
 				.doFinally(__ -> {
-					LOGGER_SUBSCRIPTION.debug("Released singleton lock: {}", rctx.getReference());
+					logSubscription(rctx.getReference(), null, "Released singleton lock");
 					lock.set(false); // unlock
 					sink.next(0L); // notify those waiting on lock
 				}));
@@ -185,10 +184,12 @@ public class DependencyResolver {
 		rctx.setMono(rctx.getMono()
 				.flatMap(o -> Mono.deferWithContext(ctx -> {
 							AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
+							if (rctx.getDescriptor().getSetterMethods().isEmpty()) {
+								logSubscription(rctx.getReference(), o, "No setters found");
+								return Mono.empty();
+							}
 							if (!isFreshInstance.get()) {
-								LOGGER_SUBSCRIPTION.debug("Skipping setters for {} on {}: "
-												+ "instance was obtained from cache and setters were already executed",
-										rctx.getReference(), o);
+								logSubscription(rctx.getReference(), o, "Ignoring setters as instance was obtained from cache");
 								return Mono.empty();
 							}
 							Mono<Void> setterMono = Mono.zip(setterResolution.getResolved().stream()
@@ -208,12 +209,11 @@ public class DependencyResolver {
 											}
 										}
 									})
-									.then(Mono.fromRunnable(() -> LOGGER_SUBSCRIPTION.debug("Invoked setters for {} on {}",
-											rctx.getReference(), o)));
-							ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
-							setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
-							LOGGER_SUBSCRIPTION.debug("Found setters for {} on {}: deferring execution until all "
-									+ "dependencies are instantiated", rctx.getReference(), o);
+									.then(Mono.fromRunnable(() -> logSubscription(rctx.getReference(), o, "Successfully invoked setters")));
+								ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
+								setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
+								logSubscription(rctx.getReference(), o, "Setters found: their invocation will be deferred until all "
+										+ "dependency instances are available");
 							return Mono.empty();
 						})
 						.thenReturn(o)));
@@ -227,28 +227,22 @@ public class DependencyResolver {
 								ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
 								List<Mono<Void>> setterMonos = setterDelegate.pop();
 								if (setterDelegate.isEmpty()) {
-									return Mono.when(setterMonos)
-											.then(Mono.fromRunnable(() -> LOGGER_SUBSCRIPTION
-													.debug("Executed all setters for {} and all its dependencies on {}",
-															rctx.getReference(), o)));
+									return Mono.when(setterMonos);
 								}
-								LOGGER_SUBSCRIPTION.debug("Delegating setter execution to parent service for {} on {}",
-										rctx.getReference(), o);
 								setterDelegate.element().addAll(setterMonos);
 								return Mono.empty();
 							})
 							.thenReturn(o))
-					.doOnNext(o -> LOGGER_SUBSCRIPTION.debug("Returning instance for requested service {}: {}",
-							rctx.getReference(), o))
+					.doOnNext(o -> logSubscription(rctx.getReference(), o, "Returning instance"))
 					// Initialize subscriber context
 					.subscriberContext(ctx -> {
-						LOGGER_SUBSCRIPTION.debug("Subscription triggered for {}", rctx.getReference());
+						logSubscription(rctx.getReference(), null, "Subscription triggered");
 						ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.getOrDefault("setterDelegate", new ArrayDeque<>());
 						setterDelegate.push(new ArrayList<>());
 						return ctx.put("setterDelegate", setterDelegate)
 								.put("isFreshInstance", new AtomicBoolean(true));
 					}));
-			LOGGER_ASSEMBLY.debug("Finalized reactive chain assembly for {}", rctx.getReference());
+			logAssembly(rctx.getReference(), "Finalized reactive chain assembly");
 		}
 	}
 	
@@ -271,11 +265,25 @@ public class DependencyResolver {
 		Optional<CircularInstantiationDetector> nextCidOpt = cid.add(ref);
 		if (nextCidOpt.isPresent()) {
 			instantiationChains.put(thisRWP, nextCidOpt.get());
-			LOGGER_SUBSCRIPTION.debug("Checking circular instantiation for {}, current instantiation chain: {}", ref, nextCidOpt.get());
+			if (LOGGER_SUBSCRIPTION.isDebugEnabled()) {
+				logSubscription(ref, null, "Circular instantiation check passed. Current instantiation chain: " + nextCidOpt.get());
+			}
 		} else {
 			throw new RdiException("Circular instantiation detected: " + ref
-					+ " endlessly instantiates other services that instantiate this one in their turn. "
+					+ " endlessly instantiates other services that instantiate this one in return. "
 					+ "Maybe declare " + ref + " as singleton?");
 		}
+	}
+	
+	private static void logSubscription(ServiceReference<?> ref, Object instance, String message) {
+		if (instance != null) {
+			LOGGER_SUBSCRIPTION.debug("[serviceRef={}, instance={}] {}", ref, instance, message);
+		} else {
+			LOGGER_SUBSCRIPTION.debug("[serviceRef={}] {}", ref, message);
+		}
+	}
+	
+	private static void logAssembly(ServiceReference<?> ref, String message) {
+		LOGGER_ASSEMBLY.debug("[serviceRef={}] {}", ref, message);
 	}
 }

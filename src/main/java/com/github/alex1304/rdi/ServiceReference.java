@@ -28,12 +28,10 @@ public class ServiceReference<T> {
 	
 	private final String serviceName;
 	private final Class<T> serviceClass;
-	private final boolean isCustomName;
 	
-	private ServiceReference(String serviceName, Class<T> serviceClass, boolean isCustomName) {
+	private ServiceReference(String serviceName, Class<T> serviceClass) {
 		this.serviceName = serviceName;
 		this.serviceClass = serviceClass;
-		this.isCustomName = isCustomName;
 	}
 	
 	/**
@@ -47,7 +45,7 @@ public class ServiceReference<T> {
 	public static <T> ServiceReference<T> of(String serviceName, Class<T> serviceClass) {
 		requireNonNull(serviceName);
 		requireNonNull(serviceClass);
-		return new ServiceReference<>(serviceName, serviceClass, true);
+		return new ServiceReference<>(serviceName, serviceClass);
 	}
 	
 	/**
@@ -60,7 +58,7 @@ public class ServiceReference<T> {
 	 */
 	public static <T> ServiceReference<T> ofType(Class<T> serviceClass) {
 		requireNonNull(serviceClass);
-		return new ServiceReference<>(serviceClass.getName(), serviceClass, false);
+		return new ServiceReference<>(serviceClass.getName(), serviceClass);
 	}
 
 	/**
@@ -98,9 +96,6 @@ public class ServiceReference<T> {
 
 	@Override
 	public String toString() {
-		if (isCustomName) {
-			return serviceName + '<' + serviceClass.getName() + '>';
-		}
 		return serviceName;
 	}
 }
