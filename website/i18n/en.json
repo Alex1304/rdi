@@ -26,6 +26,28 @@
       },
       "the-container": {
         "title": "The Container"
+      },
+      "version-1.0.0/version-1.0.0-debugging": {
+        "title": "Debugging"
+      },
+      "version-1.0.0/version-1.0.0-dynamic-configuration": {
+        "title": "Dynamic Configuration"
+      },
+      "version-1.0.0/version-1.0.0-getting-started": {
+        "title": "Getting Started"
+      },
+      "version-1.0.0/version-1.0.0-intro": {
+        "title": "Introduction to RDI",
+        "sidebar_label": "Introduction"
+      },
+      "version-1.0.0/version-1.0.0-service-descriptors": {
+        "title": "Service Descriptors"
+      },
+      "version-1.0.0/version-1.0.0-service-references": {
+        "title": "Service References"
+      },
+      "version-1.0.0/version-1.0.0-the-container": {
+        "title": "The Container"
       }
     },
     "links": {
