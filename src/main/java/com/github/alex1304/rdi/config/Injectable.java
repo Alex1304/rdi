@@ -71,6 +71,8 @@ public interface Injectable {
 	 * @param ref         the reference
 	 * @param asSupertype the supertype of the reference that matches will the
 	 *                    target injection method's parameter type
+	 * @param <T>         the generic type of the reference, captured to ensure that
+	 *                    the second argument is actually a supertype of it
 	 * @return an injectable parameter
 	 */
 	static <T> Injectable ref(ServiceReference<T> ref, Class<? super T> asSupertype) {
@@ -164,6 +166,8 @@ public interface Injectable {
 	 * @param type  the type of the value. It may be a super type of the actual
 	 *              runtime type of the value, in a such way that it matches with
 	 *              the injection method's parameter type
+	 * @param <T>   the generic type of the object, captured to ensure that the
+	 *              second argument is actually a supertype of it
 	 * @return an injectable parameter
 	 */
 	static <T> Injectable value(T value, Class<? super T> type) {

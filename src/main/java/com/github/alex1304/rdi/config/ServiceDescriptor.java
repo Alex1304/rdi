@@ -140,9 +140,6 @@ public class ServiceDescriptor {
 	 * {@link ServiceDescriptor#builder(ServiceReference)}.
 	 * 
 	 * @param serviceReference the service reference
-	 * @param isSingleton      whether the service should be instantiated only once
-	 *                         or if a new instance should be created every time it
-	 *                         is requested
 	 * @return a new ServiceDescriptor
 	 * @throws RdiException if the class does not have a public no-arg constructor
 	 */
