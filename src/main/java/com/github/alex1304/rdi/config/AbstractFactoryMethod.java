@@ -9,9 +9,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import org.reactivestreams.Publisher;
+
 import com.github.alex1304.rdi.RdiException;
 
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 
 abstract class AbstractFactoryMethod implements FactoryMethod {
@@ -32,17 +33,18 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
 	
 	@Override
 	public Mono<Object> invoke(Object... args) {
-		try {
-			if (Mono.class.isAssignableFrom(methodHandle.type().returnType())) {
-				return (Mono<Object>) asGenericSpreader(methodHandle, args.length)
+		return Mono.defer(() -> {
+			try {
+				if (Publisher.class.isAssignableFrom(methodHandle.type().returnType())) {
+					return Mono.from((Publisher<Object>) asGenericSpreader(methodHandle, args.length).invoke(args));
+				}
+				Object o = asGenericSpreader(methodHandle, args.length)
 						.invoke(args);
+				return Mono.just(o);
+			} catch (Throwable t) {
+				return Mono.error(t);
 			}
-			Object o = asGenericSpreader(methodHandle, args.length)
-					.invoke(args);
-			return Mono.just(o);
-		} catch (Throwable t) {
-			throw Exceptions.propagate(t);
-		}
+		});
 	}
 	
 	@Override

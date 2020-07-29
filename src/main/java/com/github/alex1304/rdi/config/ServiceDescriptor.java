@@ -1,11 +1,14 @@
 package com.github.alex1304.rdi.config;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import com.github.alex1304.rdi.RdiException;
 import com.github.alex1304.rdi.ServiceReference;
 
 import reactor.util.annotation.Nullable;
@@ -26,10 +29,10 @@ public class ServiceDescriptor {
 	private final ServiceReference<?> ref;
 	private final boolean isSingleton;
 	private final FactoryMethod factoryMethod;
-	private final Set<SetterMethod> setterMethods;
+	private final List<SetterMethod> setterMethods;
 	
 	private ServiceDescriptor(ServiceReference<?> ref, boolean isSingleton, FactoryMethod factoryMethod,
-			Set<SetterMethod> setterMethods) {
+			List<SetterMethod> setterMethods) {
 		this.ref = ref;
 		this.isSingleton = isSingleton;
 		this.factoryMethod = factoryMethod;
@@ -69,7 +72,7 @@ public class ServiceDescriptor {
 	 * 
 	 * @return the setter methods
 	 */
-	public Set<SetterMethod> getSetterMethods() {
+	public List<SetterMethod> getSetterMethods() {
 		return setterMethods;
 	}
 
@@ -93,9 +96,69 @@ public class ServiceDescriptor {
 		return "ServiceDescriptor{ref=" + ref + ", isSingleton=" + isSingleton + ", factoryMethod=" + factoryMethod
 				+ ", setterMethods=" + setterMethods + "}";
 	}
+	
+	/**
+	 * Convenience method to create a descriptor for a service that does not have
+	 * any dependencies. The class must define a public no-arg constructor for it to
+	 * work. This is equivalent to:
+	 * 
+	 * <pre>
+	 * ServiceDescriptor.builder(serviceReference).setSingleton(isSingleton).build();
+	 * </pre>
+	 * 
+	 * <p>
+	 * This variant allows to specify whether the service should be a singleton. If
+	 * you want to define dependencies for the service, see
+	 * {@link ServiceDescriptor#builder(ServiceReference)}.
+	 * 
+	 * @param serviceReference the service reference
+	 * @param isSingleton      whether the service should be instantiated only once
+	 *                         or if a new instance should be created every time it
+	 *                         is requested
+	 * @return a new ServiceDescriptor
+	 * @throws RdiException if the class does not have a public no-arg constructor
+	 */
+	public static ServiceDescriptor standalone(ServiceReference<?> serviceReference, boolean isSingleton) {
+		return new ServiceDescriptor(serviceReference, isSingleton, FactoryMethod.constructor()
+				.apply(serviceReference.getServiceClass()), Collections.emptyList());
+	}
+	
+	/**
+	 * Convenience method to create a descriptor for a service that does not have
+	 * any dependencies. The class must define a public no-arg constructor for it to
+	 * work. This is equivalent to:
+	 * 
+	 * <pre>
+	 * ServiceDescriptor.builder(serviceReference).build();
+	 * </pre>
+	 * 
+	 * <p>
+	 * This variant will configure the service as a singleton by default. If you do
+	 * not want it to be singeton, you may use the overload
+	 * {@link ServiceDescriptor#standalone(ServiceReference, boolean)} instead. If
+	 * you want to define dependencies for the service, see
+	 * {@link ServiceDescriptor#builder(ServiceReference)}.
+	 * 
+	 * @param serviceReference the service reference
+	 * @param isSingleton      whether the service should be instantiated only once
+	 *                         or if a new instance should be created every time it
+	 *                         is requested
+	 * @return a new ServiceDescriptor
+	 * @throws RdiException if the class does not have a public no-arg constructor
+	 */
+	public static ServiceDescriptor standalone(ServiceReference<?> serviceReference) {
+		return standalone(serviceReference, true);
+	}
 
 	/**
 	 * Creates a new builder for a {@link ServiceDescriptor}.
+	 * 
+	 * <p>
+	 * The builder will allow you to define all the dependencies for the service, in
+	 * factory methods as well as in setters. If your service does not require any
+	 * dependency, you may prefer to use
+	 * {@link ServiceDescriptor#standalone(ServiceReference)} and
+	 * {@link ServiceDescriptor#standalone(ServiceReference, boolean)}.
 	 * 
 	 * @param ref the service reference targeted by the descriptor to build
 	 * @return a new builder
@@ -110,7 +173,7 @@ public class ServiceDescriptor {
 		private boolean isSingleton = true;
 		private final Function<Class<?>, FactoryMethod> defaultFactoryMethod;
 		private Function<Class<?>, FactoryMethod> factoryMethod;
-		private final Set<SetterMethod> setterMethods = new HashSet<>();
+		private final List<Supplier<SetterMethod>> setterMethods = new ArrayList<>();
 		
 		private Builder(ServiceReference<?> ref) {
 			this.ref = ref;
@@ -121,7 +184,7 @@ public class ServiceDescriptor {
 		/**
 		 * Sets whether to configure the service as singleton. If true, the service will
 		 * only be instantiated once and all other services depending on it will share
-		 * the same instance.
+		 * the same instance. Defaults to <code>true</code>.
 		 * 
 		 * @param isSingleton true if singleton, false if not
 		 * @return this builder
@@ -132,12 +195,13 @@ public class ServiceDescriptor {
 		}
 		
 		/**
-		 * Sets the factory method that will instantiate the service,
-		 * with the potential dependencies to inject.
+		 * Sets the factory method that will instantiate the service, with the potential
+		 * dependencies to inject. Defaults to a constructor with no arguments
+		 * (<code>FactoryMethod.constructor()</code>)
 		 * 
-		 * @param factoryMethod the factory method to set. The appropriate {@link Function} can be
-		 *                      obtained by using one of the static methods of the
-		 *                      {@link FactoryMethod} interface.
+		 * @param factoryMethod the factory method to set. The appropriate
+		 *                      {@link Function} can be obtained by using one of the
+		 *                      static methods of the {@link FactoryMethod} interface.
 		 * @return this builder
 		 */
 		public Builder setFactoryMethod(@Nullable Function<Class<?>, FactoryMethod> factoryMethod) {
@@ -148,6 +212,10 @@ public class ServiceDescriptor {
 		/**
 		 * Adds a setter method that is capable of injecting an additional dependency
 		 * after instantiation.
+		 * 
+		 * <p>
+		 * This method may be called multiple times for the same setter. This is useful
+		 * if your setter actually represents a <code>add</code> operation.
 		 * 
 		 * <p>
 		 * This assumes that the setter has a <code>void</code> return type. If it is
@@ -168,6 +236,10 @@ public class ServiceDescriptor {
 		 * after instantiation.
 		 * 
 		 * <p>
+		 * This method may be called multiple times for the same setter. This is useful
+		 * if your setter actually represents a <code>add</code> operation.
+		 * 
+		 * <p>
 		 * This overload allows you to specify a return type for the setter method. In
 		 * most cases it will be <code>void</code>, if that's the case you may prefer
 		 * {@link #addSetterMethod(String, Injectable)} with makes this assumption.
@@ -179,7 +251,7 @@ public class ServiceDescriptor {
 		 * @return this builder
 		 */
 		public Builder addSetterMethod(String name, Injectable param, Class<?> returnType) {
-			setterMethods.add(new SetterMethod(ref.getServiceClass(), name, returnType, param));
+			setterMethods.add(() -> new SetterMethod(ref.getServiceClass(), name, returnType, param));
 			return this;
 		}
 		
@@ -187,10 +259,14 @@ public class ServiceDescriptor {
 		 * Builds the service descriptor.
 		 * 
 		 * @return a newly built {@link ServiceDescriptor}
+		 * @throws RdiException if one of the injection methods cannot be found in the
+		 *                      target class or are not public
 		 */
 		public ServiceDescriptor build() {
 			return new ServiceDescriptor(ref, isSingleton, factoryMethod.apply(ref.getServiceClass()),
-					Collections.unmodifiableSet(setterMethods));
+					Collections.unmodifiableList(setterMethods.stream()
+							.map(Supplier::get)
+							.collect(Collectors.toList())));
 		}
 	}
 }
