@@ -25,8 +25,8 @@ const javadocSite = 'https://www.javadoc.io/doc/com.github.alex1304/rdi/latest/i
 const siteConfig = {
     title: 'RDI Documentation', // Title for your website.
     tagline: 'Dependency Injection library with reactive capabilities, powered by Reactor',
-    url: 'https://rdi.alex1304.com', // Your website URL
-    baseUrl: '/', // Base URL for your project */
+    url: 'https://alex1304.github.io', // Your website URL
+    baseUrl: '/rdi/', // Base URL for your project */
     // For github.io type URLs, you would set the url and baseUrl like:
     //   url: 'https://facebook.github.io',
     //   baseUrl: '/test-site/',

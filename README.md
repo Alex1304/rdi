@@ -13,7 +13,7 @@ Dependency Injection library with reactive capabilities, powered by Reactor.
 
 RDI stands for Reactive Dependency Injection. It is a library allowing to manage the instantiation of beans, services, and any kind of Java object living in your application simply by defining their dependencies. The specificity of RDI is that it fully supports the reactive programming paradigm, as defined by the [Reactive Streams specification](https://www.reactive-streams.org/), allowing to make efficient and non-blocking applications with backpressure handling.
 
-You can check the full RDI documentation [here](https://rdi.alex1304.com/docs/intro).
+You can check the full RDI documentation [here](https://alex1304.github.io/rdi/docs/intro).
 
 ## Dependency injection in a nutshell
 
@@ -145,7 +145,7 @@ RDI should now be downloaded by your IDE and you are now ready to use it.
 
 ## Useful links
 
-* [Full RDI documentation](https://rdi.alex1304.com/docs/intro)
+* [Full RDI documentation](https://alex1304.github.io/rdi/docs/intro)
 * [Javadoc](https://www.javadoc.io/doc/com.github.alex1304/rdi/latest/index.html)
 * [Reactor Documentation](https://projectreactor.io/docs/core/release/reference/)
 
