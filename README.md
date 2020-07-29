@@ -7,9 +7,7 @@ Dependency Injection library with reactive capabilities, powered by Reactor.
 ![License](https://img.shields.io/github/license/Alex1304/rdi)
 [![javadoc](https://javadoc.io/badge2/com.github.alex1304/rdi/javadoc.svg)](https://javadoc.io/doc/com.github.alex1304/rdi) 
 
-<img align="right" src="../img/logo.png" width=20% />
-
-<img align="right" src="../img/logo.png" width=20% />
+<img align="right" src="https://user-images.githubusercontent.com/10291761/88860458-11decf80-d1fc-11ea-8fea-d90cf90ee399.png" width=20% />
 
 ## What is RDI?
 
