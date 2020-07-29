@@ -1,21 +1,14 @@
-# RDI
-
-Dependency Injection library with reactive capabilities, powered by Reactor.
-
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Alex1304/rdi?sort=semver)
-[![Maven Central](https://img.shields.io/maven-central/v/com.github.alex1304/rdi)](https://search.maven.org/artifact/com.github.alex1304/rdi)
-![License](https://img.shields.io/github/license/Alex1304/rdi)
-[![javadoc](https://javadoc.io/badge2/com.github.alex1304/rdi/javadoc.svg)](https://javadoc.io/doc/com.github.alex1304/rdi) 
-
-<img align="right" src="../img/logo.png" width=20% />
+---
+id: intro
+title: Introduction to RDI
+sidebar_label: Introduction
+---
 
 <img align="right" src="../img/logo.png" width=20% />
 
 ## What is RDI?
 
 RDI stands for Reactive Dependency Injection. It is a library allowing to manage the instantiation of beans, services, and any kind of Java object living in your application simply by defining their dependencies. The specificity of RDI is that it fully supports the reactive programming paradigm, as defined by the [Reactive Streams specification](https://www.reactive-streams.org/), allowing to make efficient and non-blocking applications with backpressure handling.
-
-You can check the full RDI documentation [here](https://rdi.alex1304.com/docs/intro).
 
 ## Dependency injection in a nutshell
 
@@ -108,57 +101,4 @@ RdiConfig config = RdiConfig.builder()
 
 When requesting an instance of A, the container will first subscribe to the Mono returned by `B.create()`, and then it will inject the obtained B instance into A before returning A. If you have many services like this in you application, RDI may save you a lot of time assembling the reactive chains to get your service instances.
 
-## Getting Started
-
-### Prerequisites
-
-To add RDI to your project, you must be using a dependency management tool such as [Maven](https://maven.apache.org) or [Gradle](https://gradle.org). You also need the **JDK 8 or above**.
-
-### Install using Maven
-
-Here is the dependency to add in your `pom.xml`:
-
-```xml
-<dependency>
-    <groupId>com.github.alex1304</groupId>
-    <artifactId>rdi</artifactId>
-    <version>[VERSION]</version>
-</dependency>
-```
-Replace `[VERSION]` with the latest version available on Maven Central, as shown here: [![Maven Central](https://img.shields.io/maven-central/v/com.github.alex1304/rdi)](https://search.maven.org/artifact/com.github.alex1304/rdi)
-
-### Install using Gradle
-
-If you are using Gradle, here is what to put in `build.gradle`:
-
-```groovy
-repositories {
-      mavenCentral()
-}
-
-dependencies {
-      implementation 'com.github.alex1304:rdi:[VERSION]'
-}
-```
-
-Replace `[VERSION]` with the latest version as explained above.
-
-RDI should now be downloaded by your IDE and you are now ready to use it.
-
-## Useful links
-
-* [Full RDI documentation](https://rdi.alex1304.com/docs/intro)
-* [Javadoc](https://www.javadoc.io/doc/com.github.alex1304/rdi/latest/index.html)
-* [Reactor Documentation](https://projectreactor.io/docs/core/release/reference/)
-
-## License
-
-This project is licensed under the MIT license.
-
-## Contributions
-
-Have a feature to suggest or a bug to report ? Issues and pull requests are more than welcome! Make sure to follow the template and share your ideas.
-
-## Contact
-
-If you wish to contact me directly, you can DM me on Discord (Alex1304#9704) or send an email to mirandaa1304@gmail.com. Depending on how this project turns out, a community Discord server can be considered for the future.
+Ready to get started? Go ahead and move to next section.
