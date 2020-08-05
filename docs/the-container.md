@@ -61,4 +61,4 @@ It is important to note that **nothing will happen until the returned Mono is su
 
 ## Singleton thread safety
 
-Subscribing to the `Mono` returned by `getService` may be done by multiple threads. If so, it is very important to ensure thread safety when dealing with singleton services. The default implementation is fully thread-safe and you will never end up with more than one instance of a singleton service. If it is somehow the case for you, then it is probably a bug and your should report it in the [GitHub Issue tracker](https://github.com/Alex1304/rdi/issues) of the project. Same if you experience deadlocks or other non-deterministic behavior. But generally when programming your application you should be assuming it is safe.
+Subscribing to the `Mono` returned by `getService` may be done by multiple threads. The default implementation is fully thread-safe, a singleton service is guaranteed to be instantiated once and only once.

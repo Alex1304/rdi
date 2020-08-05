@@ -3,41 +3,46 @@ package com.github.alex1304.rdi.resolver;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Objects;
-import java.util.Optional;
 
 import com.github.alex1304.rdi.ServiceReference;
 
-class CircularInstantiationDetector {
+class CycleDetector {
 	
 	private final Chain chain;
 	private final HashSet<ServiceReference<?>> knownRefs;
 	private final boolean knownRefDetected;
+	private boolean hasCycle;
 	
-	CircularInstantiationDetector() {
+	CycleDetector() {
 		this.chain = null;
 		this.knownRefs = new HashSet<>();
 		this.knownRefDetected = false;
+		this.hasCycle = false;
 	}
 	
-	private CircularInstantiationDetector(Chain chain, HashSet<ServiceReference<?>> knownRefs, boolean knownRefDetected) {
+	private CycleDetector(Chain chain, HashSet<ServiceReference<?>> knownRefs, boolean knownRefDetected, boolean hasCycle) {
 		this.chain = chain;
 		this.knownRefs = knownRefs;
 		this.knownRefDetected = knownRefDetected;
+		this.hasCycle = hasCycle;
 	}
 
-	Optional<CircularInstantiationDetector> add(ServiceReference<?> clazz) {
+	CycleDetector next(ServiceReference<?> ref) {
+		if (hasCycle) {
+			throw new IllegalStateException("Cycle already detected");
+		}
 		Chain chain = this.chain;
 		HashSet<ServiceReference<?>> knownRefs = new HashSet<>(this.knownRefs);
 		boolean knownRefDetected = this.knownRefDetected;
 		
-		chain = new Chain(clazz, chain);
-		if (knownRefs.add(clazz)) {
+		chain = new Chain(ref, chain);
+		if (knownRefs.add(ref)) {
 			if (knownRefDetected) {
 				knownRefs = new HashSet<>();
-				knownRefs.add(clazz);
+				knownRefs.add(ref);
 				knownRefDetected = false;
 			}
-			return Optional.of(new CircularInstantiationDetector(chain, knownRefs, knownRefDetected));
+			return new CycleDetector(chain, knownRefs, knownRefDetected, false);
 		}
 		knownRefDetected = true;
 		SearchResult searchResult = chain.searchForSamePreviousRef();
@@ -46,13 +51,17 @@ class CircularInstantiationDetector {
 		Chain c2 = searchResult.chain.previous;
 		while (d < searchResult.distance) {
 			if (!c1.equals(c2)) {
-				return Optional.of(new CircularInstantiationDetector(chain, knownRefs, knownRefDetected));
+				return new CycleDetector(chain, knownRefs, knownRefDetected, false);
 			}
 			c1 = c1.previous;
 			c2 = c2.previous;
 			d++;
 		}
-		return Optional.empty();
+		return new CycleDetector(chain, knownRefs, knownRefDetected, true);
+	}
+	
+	boolean hasCycle() {
+		return hasCycle;
 	}
 	
 	@Override

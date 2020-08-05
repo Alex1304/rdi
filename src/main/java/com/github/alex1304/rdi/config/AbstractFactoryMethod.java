@@ -36,10 +36,11 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
 		return Mono.defer(() -> {
 			try {
 				if (Publisher.class.isAssignableFrom(methodHandle.type().returnType())) {
-					return Mono.from((Publisher<Object>) asGenericSpreader(methodHandle, args.length).invoke(args));
+					return Mono.from((Publisher<Object>) asGenericSpreader(methodHandle, args.length).invoke(args))
+							.switchIfEmpty(Mono.error(() -> new RdiException("Reactive factory " + 
+									userFriendlyRepresentation(owner, methodName) + " completed empty")));
 				}
-				Object o = asGenericSpreader(methodHandle, args.length)
-						.invoke(args);
+				Object o = asGenericSpreader(methodHandle, args.length).invoke(args);
 				return Mono.just(o);
 			} catch (Throwable t) {
 				return Mono.error(t);
@@ -79,6 +80,8 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
 	private static MethodHandle asGenericSpreader(MethodHandle mh, int argsCount) {
 		return mh.asType(mh.type().generic()).asSpreader(Object[].class, argsCount);
 	}
+	
+	abstract String userFriendlyRepresentation(Class<?> owner, String methodName);
 
 	@Override
 	public String toString() {

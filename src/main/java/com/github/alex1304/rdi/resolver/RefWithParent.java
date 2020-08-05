@@ -14,6 +14,14 @@ class RefWithParent {
 		this.element = element;
 	}
 
+	ServiceReference<?> getParent() {
+		return parent;
+	}
+
+	ServiceReference<?> getElement() {
+		return element;
+	}
+
 	@Override
 	public int hashCode() {
 		return Objects.hash(element, parent);

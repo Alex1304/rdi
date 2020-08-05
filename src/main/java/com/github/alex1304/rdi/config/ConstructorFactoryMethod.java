@@ -16,4 +16,9 @@ class ConstructorFactoryMethod extends AbstractFactoryMethod {
 			List<Class<?>> paramTypes) throws ReflectiveOperationException {
 		return MethodHandles.publicLookup().findConstructor(owner, MethodType.methodType(void.class, paramTypes));
 	}
+
+	@Override
+	String userFriendlyRepresentation(Class<?> owner, String methodName) {
+		return owner.getName() + ".<init>";
+	}
 }

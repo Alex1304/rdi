@@ -16,4 +16,9 @@ class StaticFactoryMethod extends AbstractFactoryMethod {
 			List<Class<?>> paramTypes) throws ReflectiveOperationException {
 		return MethodHandles.publicLookup().findStatic(owner, methodName, MethodType.methodType(returnType, paramTypes));
 	}
+
+	@Override
+	String userFriendlyRepresentation(Class<?> owner, String methodName) {
+		return owner.getName() + "." + methodName;
+	}
 }

@@ -3,7 +3,6 @@ package com.github.alex1304.rdi.resolver;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,16 +57,20 @@ public class DependencyResolver {
 		Map<ServiceReference<?>, ResolutionContext> resolutionContextByRef = serviceDescriptors.stream()
 				.map(ResolutionContext::new)
 				.collect(Collectors.toMap(rctx -> rctx.getReference(), Function.identity()));
-		Queue<ServiceReference<?>> stack = Collections.asLifoQueue(new ArrayDeque<>());
-		HashSet<ServiceReference<?>> circularFactoryDepDetector = new HashSet<>();
-		Map<RefWithParent, CircularInstantiationDetector> instantiationChains = new ConcurrentHashMap<>();
-		stack.addAll(resolutionContextByRef.keySet());
+		Queue<RefWithParent> stack = Collections.asLifoQueue(new ArrayDeque<>());
+		Map<RefWithParent, CycleDetector> dependencyChains = new ConcurrentHashMap<>();
+		Map<RefWithParent, CycleDetector> instantiationChains = new ConcurrentHashMap<>();
+		stack.addAll(resolutionContextByRef.keySet().stream()
+				.peek(ref -> throwIfCycleDetected(ref, null, null, dependencyChains, null)) // Should never throw, just initialize the chains
+				.map(ref -> new RefWithParent(null, ref))
+				.collect(Collectors.toList()));
 		while (!stack.isEmpty()) {
-			ResolutionContext rctx = resolutionContextByRef.get(stack.remove());
+			RefWithParent refWithParent = stack.remove();
+			ResolutionContext rctx = resolutionContextByRef.get(refWithParent.getElement());
 			switch (rctx.getStep()) {
 				case DONE: continue;
 				case RESOLVING_FACTORY: {
-					stack.add(rctx.getReference());
+					stack.add(refWithParent);
 					ResolutionResult factoryResolution = ResolutionResult.compute(
 							rctx.getReference(),
 							rctx.getDescriptor().getFactoryMethod().getInjectableParameters().stream()
@@ -80,18 +84,19 @@ public class DependencyResolver {
 									.map(ResolutionContext::getReference)
 									.collect(Collectors.toList()));
 						}
-						circularFactoryDepDetector.remove(rctx.getReference());
 						createMono(rctx, factoryResolution, instantiationChains);
 						rctx.setStep(ResolutionStep.RESOLVING_SETTERS);
 					} else {
+						if (LOGGER_ASSEMBLY.isDebugEnabled()) {
+							logAssembly(rctx.getReference(), "Discovered factory dependencies: " + factoryResolution.getUnresolved());
+						}
 						factoryResolution.getUnresolved().forEach(u -> {
-							if (!circularFactoryDepDetector.add(u)) {
-								String a = rctx.getReference().toString();
-								String b = u.toString();
-								throw new RdiException("Circular dependency detected: service '" + a + "' needs '" + b
-										+ "' to be instantiated and '" + b + "' needs '" + a + "' to be instantiated.");
-							}
-							stack.add(u);
+							throwIfCycleDetected(u,
+									refWithParent.getElement(),
+									refWithParent.getParent(),
+									dependencyChains,
+									() -> "Circular dependency detected.");
+							stack.add(new RefWithParent(refWithParent.getElement(), u));
 						});
 					}
 					break;
@@ -116,8 +121,11 @@ public class DependencyResolver {
 						}
 						rctx.setStep(ResolutionStep.DONE);
 					} else {
-						stack.add(rctx.getReference());
-						stack.addAll(setterResolution.getUnresolved());
+						if (LOGGER_ASSEMBLY.isDebugEnabled()) {
+							logAssembly(rctx.getReference(), "Discovered setter dependencies: " + setterResolution.getUnresolved());
+						}
+						stack.add(refWithParent);
+						setterResolution.getUnresolved().forEach(u -> stack.add(new RefWithParent(null /*ignored*/, u)));
 					}
 					break;
 				}
@@ -130,13 +138,15 @@ public class DependencyResolver {
 	}
 	
 	private static void createMono(ResolutionContext rctx, ResolutionResult factoryResolution,
-			Map<RefWithParent, CircularInstantiationDetector> instantiationChains) {
+			Map<RefWithParent, CycleDetector> instantiationChains) {
 		rctx.setMono(
 				Mono.deferWithContext(ctx -> {
-					checkCircularInstantiation(rctx.getReference(),
+					throwIfCycleDetected(rctx.getReference(),
 							ctx.getOrDefault("parent", null),
 							ctx.getOrDefault("grandParent", null),
-							instantiationChains);
+							instantiationChains,
+							() -> "Circular instantiation detected involving " + rctx.getReference()
+									+ ". Maybe mark " + rctx.getReference() + " as singleton?");
 					if (factoryResolution.hasNoDeps()) {
 						return rctx.getDescriptor().getFactoryMethod().invoke();
 					} else {
@@ -257,21 +267,16 @@ public class DependencyResolver {
 		});
 	}
 	
-	private static void checkCircularInstantiation(ServiceReference<?> ref, ServiceReference<?> parent, ServiceReference<?> grandParent,
-			Map<RefWithParent, CircularInstantiationDetector> instantiationChains) {
+	private static void throwIfCycleDetected(ServiceReference<?> ref, ServiceReference<?> parent, ServiceReference<?> grandParent,
+			Map<RefWithParent, CycleDetector> chains, Supplier<String> errorMessage) {
 		RefWithParent parentRWP = new RefWithParent(grandParent, parent);
 		RefWithParent thisRWP = new RefWithParent(parent, ref);
-		CircularInstantiationDetector cid = instantiationChains.getOrDefault(parentRWP, new CircularInstantiationDetector());
-		Optional<CircularInstantiationDetector> nextCidOpt = cid.add(ref);
-		if (nextCidOpt.isPresent()) {
-			instantiationChains.put(thisRWP, nextCidOpt.get());
-			if (LOGGER_SUBSCRIPTION.isDebugEnabled()) {
-				logSubscription(ref, null, "Circular instantiation check passed. Current instantiation chain: " + nextCidOpt.get());
-			}
+		CycleDetector cycleDetector = chains.getOrDefault(parentRWP, new CycleDetector());
+		CycleDetector nextCycleDetector = cycleDetector.next(ref);
+		if (!nextCycleDetector.hasCycle()) {
+			chains.put(thisRWP, nextCycleDetector);
 		} else {
-			throw new RdiException("Circular instantiation detected: " + ref
-					+ " endlessly instantiates other services that instantiate this one in return. "
-					+ "Maybe declare " + ref + " as singleton?");
+			throw new RdiException(errorMessage.get() + " Chain: " + nextCycleDetector);
 		}
 	}
 	
