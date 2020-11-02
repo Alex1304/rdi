@@ -169,7 +169,7 @@ public class ServiceDescriptor {
 		private final ServiceReference<?> ref;
 		private boolean isSingleton = true;
 		private final Function<Class<?>, FactoryMethod> defaultFactoryMethod;
-		private Function<Class<?>, FactoryMethod> factoryMethod;
+		private Function<Class<?>, ? extends FactoryMethod> factoryMethod;
 		private final List<Supplier<SetterMethod>> setterMethods = new ArrayList<>();
 		
 		private Builder(ServiceReference<?> ref) {
@@ -201,7 +201,7 @@ public class ServiceDescriptor {
 		 *                      static methods of the {@link FactoryMethod} interface.
 		 * @return this builder
 		 */
-		public Builder setFactoryMethod(@Nullable Function<Class<?>, FactoryMethod> factoryMethod) {
+		public Builder setFactoryMethod(@Nullable Function<Class<?>, ? extends FactoryMethod> factoryMethod) {
 			this.factoryMethod = factoryMethod == null ? defaultFactoryMethod : factoryMethod;
 			return this;
 		}

@@ -40,5 +40,3 @@ assertNotEquals(ref2, ref3);
 assertNotEquals(ref3, ref4);
 assertEquals(ref4, ref5);
 ```
-
-> The best practice to deal with service references in your application is to define your `ServiceReference` instances as constants. You can declare these constants either in a dedicated utility class, or directly in each service class if you always have one reference per class.

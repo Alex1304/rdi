@@ -35,7 +35,9 @@ public interface RdiServiceContainer {
 	<S> Mono<S> getService(ServiceReference<S> serviceRef);
 	
 	/**
-	 * Checks if this container contains a service with the given reference.
+	 * Checks if this container contains a service with the given reference. It does
+	 * not check whether the service is initialized or not, it only checks for its
+	 * existence in the configuration.
 	 * 
 	 * @param serviceRef the reference to test
 	 * @return true if present, else false

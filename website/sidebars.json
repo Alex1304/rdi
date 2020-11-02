@@ -2,6 +2,6 @@
     "docs": {
         "Discover RDI": ["intro", "getting-started"],
         "Core features": ["service-references", "service-descriptors", "the-container"],
-        "Advanced": ["debugging", "dynamic-configuration"]
+        "Advanced": ["annotation-based-configuration", "debugging"]
     }
 }

@@ -4,7 +4,7 @@ title: Introduction to RDI
 sidebar_label: Introduction
 ---
 
-<img align="right" src="../img/logo.png" width=20% />
+<img align="right" src="/rdi/img/logo.png" width=20% />
 
 ## What is RDI?
 
@@ -100,5 +100,7 @@ RdiConfig config = RdiConfig.builder()
 ```
 
 When requesting an instance of A, the container will first subscribe to the Mono returned by `B.create()`, and then it will inject the obtained B instance into A before returning A. If you have many services like this in you application, RDI may save you a lot of time assembling the reactive chains to get your service instances.
+
+Since version `1.1.0`, RDI also supports [annotation-based configuration](annotation-based-configuration.md) of the container to save even more time.
 
 Ready to get started? Go ahead and move to next section.

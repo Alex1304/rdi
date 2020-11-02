@@ -21,12 +21,11 @@ import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
 import com.github.alex1304.rdi.config.SetterMethod;
 
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.ReplayProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 /**
  * Helper class to assemble the reactive chains instantiating the services and
@@ -140,7 +139,7 @@ public class DependencyResolver {
 	private static void createMono(ResolutionContext rctx, ResolutionResult factoryResolution,
 			Map<RefWithParent, CycleDetector> instantiationChains) {
 		rctx.setMono(
-				Mono.deferWithContext(ctx -> {
+				Mono.deferContextual(ctx -> {
 					throwIfCycleDetected(rctx.getReference(),
 							ctx.getOrDefault("parent", null),
 							ctx.getOrDefault("grandParent", null),
@@ -165,10 +164,9 @@ public class DependencyResolver {
 	private static Mono<Object> wrapSingleton(ResolutionContext rctx) {
 		logAssembly(rctx.getReference(), "Wrapping in singleton");
 		AtomicBoolean lock = new AtomicBoolean();
-		ReplayProcessor<Long> lockNotifier = ReplayProcessor.cacheLastOrDefault(0L);
-		FluxSink<Long> sink = lockNotifier.sink(FluxSink.OverflowStrategy.LATEST);
+		Sinks.Many<Long> lockNotifier = Sinks.many().replay().latestOrDefault(0L);
 		Mono<Object> factoryMono = rctx.getMono();
-		return Mono.deferWithContext(ctx -> lockNotifier.filter(__ -> lock.compareAndSet(false, true))
+		return Mono.deferContextual(ctx -> lockNotifier.asFlux().filter(__ -> lock.compareAndSet(false, true))
 				.next()
 				.doOnSubscribe(s -> logSubscription(rctx.getReference(), null, "Waiting on singleton lock"))
 				.flatMap(__ -> {
@@ -186,13 +184,13 @@ public class DependencyResolver {
 				.doFinally(__ -> {
 					logSubscription(rctx.getReference(), null, "Released singleton lock");
 					lock.set(false); // unlock
-					sink.next(0L); // notify those waiting on lock
+					lockNotifier.tryEmitNext(0L); // notify those waiting on lock
 				}));
 	}
 	
 	private static void enrichMonoWithSetterResolution(ResolutionContext rctx, ResolutionResult setterResolution) {
 		rctx.setMono(rctx.getMono()
-				.flatMap(o -> Mono.deferWithContext(ctx -> {
+				.flatMap(o -> Mono.deferContextual(ctx -> {
 							AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
 							if (rctx.getDescriptor().getSetterMethods().isEmpty()) {
 								logSubscription(rctx.getReference(), o, "No setters found");
@@ -220,10 +218,10 @@ public class DependencyResolver {
 										}
 									})
 									.then(Mono.fromRunnable(() -> logSubscription(rctx.getReference(), o, "Successfully invoked setters")));
-								ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
-								setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
-								logSubscription(rctx.getReference(), o, "Setters found: their invocation will be deferred until all "
-										+ "dependency instances are available");
+							ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
+							setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
+							logSubscription(rctx.getReference(), o, "Setters found: their invocation will be deferred until all "
+									+ "dependency instances are available");
 							return Mono.empty();
 						})
 						.thenReturn(o)));
@@ -233,7 +231,7 @@ public class DependencyResolver {
 		for (ResolutionContext rctx : resolutionContextByRef.values()) {
 			rctx.setMono(rctx.getMono()
 					// Assemble code to execute all setter delegates
-					.flatMap(o -> Mono.deferWithContext(ctx -> {
+					.flatMap(o -> Mono.deferContextual(ctx -> {
 								ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
 								List<Mono<Void>> setterMonos = setterDelegate.pop();
 								if (setterDelegate.isEmpty()) {
@@ -245,7 +243,7 @@ public class DependencyResolver {
 							.thenReturn(o))
 					.doOnNext(o -> logSubscription(rctx.getReference(), o, "Returning instance"))
 					// Initialize subscriber context
-					.subscriberContext(ctx -> {
+					.contextWrite(ctx -> {
 						logSubscription(rctx.getReference(), null, "Subscription triggered");
 						ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.getOrDefault("setterDelegate", new ArrayDeque<>());
 						setterDelegate.push(new ArrayList<>());
@@ -256,8 +254,8 @@ public class DependencyResolver {
 		}
 	}
 	
-	private static Mono<Object> putParentInSubscriberContext(Mono<Object> mono, Context oldContext, ServiceReference<?> parent) {
-		return mono.subscriberContext(ctx -> {
+	private static Mono<Object> putParentInSubscriberContext(Mono<Object> mono, ContextView oldContext, ServiceReference<?> parent) {
+		return mono.contextWrite(ctx -> {
 			ctx = ctx.put("parent", parent);
 			Optional<ServiceReference<?>> oldParent = oldContext.getOrEmpty("parent");
 			if (oldParent.isPresent()) {

@@ -5,11 +5,11 @@
     "previous": "Previous",
     "tagline": "Dependency Injection library with reactive capabilities, powered by Reactor",
     "docs": {
+      "annotation-based-configuration": {
+        "title": "Annotation-based Configuration"
+      },
       "debugging": {
         "title": "Debugging"
-      },
-      "dynamic-configuration": {
-        "title": "Dynamic Configuration"
       },
       "getting-started": {
         "title": "Getting Started"

@@ -106,6 +106,9 @@ RdiConfig config = RdiConfig.builder()
 
 When requesting an instance of A, the container will first subscribe to the Mono returned by `B.create()`, and then it will inject the obtained B instance into A before returning A. If you have many services like this in you application, RDI may save you a lot of time assembling the reactive chains to get your service instances.
 
+
+**Note:** Since version `1.1.0`, RDI also supports [annotation-based configuration](https://alex1304.github.io/rdi/docs/annotation-based-configuration) of the container to save even more time.
+
 ## Getting Started
 
 ### Prerequisites

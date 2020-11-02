@@ -189,7 +189,7 @@
 		<dependency>
 			<groupId>io.projectreactor</groupId>
 			<artifactId>reactor-core</artifactId>
-			<version>3.3.8.RELEASE</version>
+			<version>3.4.0</version>
 		</dependency>
 		
 		<!-- TEST -->
@@ -203,6 +203,12 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<version>1.7.30</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections</artifactId>
+			<version>0.9.12</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

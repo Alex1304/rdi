@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.github.alex1304.rdi.RdiException;
+import com.github.alex1304.rdi.finder.ServiceFinder;
 
 /**
  * Contains all the configuration to create a service container. It stores the
@@ -35,6 +36,17 @@ public class RdiConfig {
 		return new Builder();
 	}
 	
+	/**
+	 * Delegates the discovery of services to the given {@link ServiceFinder} and
+	 * creates a config with all services found.
+	 * 
+	 * @param serviceFinder the service finder
+	 * @return a new {@link RdiConfig}
+	 */
+	public static RdiConfig fromServiceFinder(ServiceFinder serviceFinder) {
+		return builder().fromServiceFinder(serviceFinder).build();
+	}
+	
 	public static class Builder {
 		
 		private final Set<ServiceDescriptor> serviceDescriptors = new HashSet<>();
@@ -45,16 +57,36 @@ public class RdiConfig {
 		 * 
 		 * @param serviceDescriptor the service descriptor to register
 		 * @return this builder
+		 * @throws RdiException if the service represented by the given descriptor is
+		 *                      already registered
 		 */
 		public Builder registerService(ServiceDescriptor serviceDescriptor) {
 			requireNonNull(serviceDescriptor);
-			if (!serviceDescriptors.add(serviceDescriptor)) {
-				throw new RdiException("Duplicate service registered: "
-						+ serviceDescriptor.getServiceReference());
-			}
+			checkAndAdd(serviceDescriptor);
 			return this;
 		}
 		
+		/**
+		 * Delegates the discovery of services to the given {@link ServiceFinder} and
+		 * registers all services found.
+		 * 
+		 * @param serviceFinder the service finder
+		 * @return this builder
+		 * @throws RdiException if at least one of the services discovered by the finder
+		 *                      is already registered.
+		 */
+		public Builder fromServiceFinder(ServiceFinder serviceFinder) {
+			requireNonNull(serviceFinder);
+			serviceFinder.findServices().forEach(this::checkAndAdd);
+			return this;
+		}
+
+		private void checkAndAdd(ServiceDescriptor descriptor) {
+			if (!serviceDescriptors.add(descriptor)) {
+				throw new RdiException("Duplicate service registered: " + descriptor.getServiceReference());
+			}
+		}
+
 		/**
 		 * Builds the {@link RdiConfig} instance with all the service descriptors
 		 * registered at the moment this method is invoked.
