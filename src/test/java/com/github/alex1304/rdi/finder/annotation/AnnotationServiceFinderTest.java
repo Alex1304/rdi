@@ -16,7 +16,7 @@ class AnnotationServiceFinderTest {
 	@Test
 	void testBuildConfig() {
 		ServiceFinder finder = AnnotationServiceFinder.create(
-				new Reflections("com.github.alex1304.rdi.finder.*")
+				new Reflections(AnnotationServiceFinderTest.class)
 						.getTypesAnnotatedWith(RdiService.class));
 		RdiConfig config = RdiConfig.fromServiceFinder(finder);
 		RdiServiceContainer container = RdiServiceContainer.create(config);
