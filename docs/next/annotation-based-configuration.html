@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Annotation-based Configuration · RDI Documentation</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="So far we have been defining the RDI configuration manually with `RdiConfig.builder()`. In this section we will see how it is possible to build the configuration in a more descriptive way to save some time writing boilerplate code."/><meta name="docsearch:version" content="next"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Annotation-based Configuration · RDI Documentation"/><meta property="og:type" content="website"/><meta property="og:url" content="https://alex1304.github.io/rdi/"/><meta property="og:description" content="So far we have been defining the RDI configuration manually with `RdiConfig.builder()`. In this section we will see how it is possible to build the configuration in a more descriptive way to save some time writing boilerplate code."/><meta property="og:image" content="https://alex1304.github.io/rdi/img/logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://alex1304.github.io/rdi/img/logo.png"/><link rel="shortcut icon" href="/rdi/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/darcula.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/rdi/js/scrollSpy.js"></script><link rel="stylesheet" href="/rdi/css/main.css"/><script src="/rdi/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/rdi/"><img class="logo" src="/rdi/img/logo.png" alt="RDI Documentation"/><h2 class="headerTitleWithLogo">RDI Documentation</h2></a><a href="/rdi/versions"><h3>next</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/rdi/docs/next/intro" target="_self">Docs</a></li><li class=""><a href="https://www.javadoc.io/doc/com.github.alex1304/rdi/latest/index.html" target="_self">API</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Advanced</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Discover RDI</h3><ul class=""><li class="navListItem"><a class="navItem" href="/rdi/docs/next/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/rdi/docs/next/getting-started">Getting Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Core features</h3><ul class=""><li class="navListItem"><a class="navItem" href="/rdi/docs/next/service-references">Service References</a></li><li class="navListItem"><a class="navItem" href="/rdi/docs/next/service-descriptors">Service Descriptors</a></li><li class="navListItem"><a class="navItem" href="/rdi/docs/next/the-container">The Container</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Advanced</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/rdi/docs/next/annotation-based-configuration">Annotation-based Configuration</a></li><li class="navListItem"><a class="navItem" href="/rdi/docs/next/debugging">Debugging</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Annotation-based Configuration</h1></header><article><div><span><p>So far we have been defining the RDI configuration manually with <code>RdiConfig.builder()</code>. In this section we will see how it is possible to build the configuration in a more descriptive way to save some time writing boilerplate code.</p>
+<h2><a class="anchor" aria-hidden="true" id="configuring-a-service-with-annotations"></a><a href="#configuring-a-service-with-annotations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring a service with annotations</h2>
+<p>When creating the RDI configuration manually, the configuration part is effectively decoupled from the service classes themselves. The configuration may be constructed in a separate class, isolated from the rest of your application logic. The tradeoff is that you will have to manually specify where are the constructors, where are the setters, what are the values or references to inject, etc.</p>
+<p>If configuration decoupling is not a requirement for your use-case, you may be interested in the <strong>annotation-based approach</strong>. By decorating your service classes with annotations, you are able to generate the RDI configuration in a much more concise and intuitive way. Here is how it works:</p>
+<pre><code class="hljs css language-java"><span class="hljs-meta">@RdiService</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">A</span> </span>{
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> B b;
+
+    <span class="hljs-meta">@RdiFactory</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">A</span><span class="hljs-params">(B b)</span> </span>{
+        <span class="hljs-keyword">this</span>.b = b;
+    }
+}
+
+<span class="hljs-meta">@RdiService</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">B</span> </span>{
+}
+</code></pre>
+<p>Without the annotations, you would have to construct your configuration object like this:</p>
+<pre><code class="hljs css language-java">RdiConfig config = RdiConfig.builder()
+        .registerService(ServiceDescriptor.builder(A_REF)
+                .setFactoryMethod(FactoryMethod.constructor(Injectable.ref(B_REF)))
+                .build())
+        .registerService(ServiceDescriptor.standalone(B_REF))
+        .build();
+</code></pre>
+<p>With the annotations, all you have to do is the following:</p>
+<pre><code class="hljs css language-java">Set&lt;Class&lt;?&gt;&gt; classes = <span class="hljs-keyword">new</span> HashSet&lt;&gt;();
+classes.add(A<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
+classes.add(B<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
+RdiConfig config = RdiConfig.fromServiceFinder(AnnotationServiceFinder.create(classes));
+</code></pre>
+<p>What happened? You simply create a <code>Set</code> containing all your annotated classes, and pass it to an <code>AnnotationServiceFinder</code>. Easy, isn't it?</p>
+<p>But we could push that even further. Indeed, you may still be annoyed by the fact that you still have to manually specify the set of classes. So instead you may use a library that scans your classpath and discover your annotated classes automatically. The most popular solution for that is the <a href="https://github.com/ronmamo/reflections">Reflections library</a>:</p>
+<pre><code class="hljs css language-java">Reflections reflections = <span class="hljs-keyword">new</span> Reflections(<span class="hljs-string">"my.package"</span>);
+Set&lt;Class&lt;?&gt;&gt; classes = reflections.getTypesAnnotatedWith(RdiService<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
+RdiConfig config = RdiConfig.fromServiceFinder(AnnotationServiceFinder.create(classes));
+</code></pre>
+<p>With only these 3 lines of code, any class that you add to your project with a <code>@RdiService</code> annotation will automatically be registered as a service!</p>
+<h2><a class="anchor" aria-hidden="true" id="annotations-more-in-detail"></a><a href="#annotations-more-in-detail" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Annotations more in detail</h2>
+<p>There are currently 5 different annotations you can use:</p>
+<ul>
+<li><code>@RdiService</code> - this is placed on the class itself, it indicates that this class represents a service. It accepts an optional value parameter if you want to specify a custom name.</li>
+<li><code>@RdiFactory</code> - this annotation indicates which constructor or static factory to use. There may be only one method with this annotation. If there are several of them, the first one in the order of declaration is taken into account, knowing that static factories always have priority over constructors. If this annotation is completely absent, then the class is expected to have a public no-arg constructor.</li>
+<li><code>@RdiSetter</code> - if you are using setters to inject your dependencies, you must decorate each setter with this annotation.</li>
+<li><code>@RdiRef</code> and <code>@RdiVal</code> - those are placed on the parameters of the constructor/factory annotated with <code>@RdiFactory</code>. The use of <code>@RdiRef</code> is required if the service to inject has a custom name, it can be omitted otherwise. <code>@RdiVal</code> is used to inject values, which can be either primitive (<code>int</code>, <code>double</code>...), a <code>String</code> or a supertype of <code>String</code> (such as <code>CharSequence</code> or even <code>Object</code>).</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="limitations"></a><a href="#limitations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Limitations</h2>
+<p>Even if annotations are very useful and can save you a lot of time, it does not fit all use cases. As said previously, by using the annotations you are abandoning the decoupling between your application's classes and the config. In essence, this means that you can only declare your own classes as a service: you cannot declare a class external to your application (e.g a library) as a service using annotations.</p>
+<p>Fortunately. RDI supports combining both annotation-based and manual approaches. In the builder of <code>RdiConfig</code>, you can simply do this:</p>
+<pre><code class="hljs css language-java">RdiConfig config = RdiConfig.builder()
+        .fromServiceFinder(AnnotationServiceFinder.create(classes))
+        .registerService(<span class="hljs-comment">/* register an extra service manually here */</span>)
+        <span class="hljs-comment">// ...</span>
+        .build();
+</code></pre>
+<p>On another note, while giving custom names to annotated services are supported, you will still be limited to 1 service per class. If you want to register 2 or more services of the same class, you would need to manually add service references with different names in the config.</p>
+</span></div></article></div><div class="docLastUpdate"><em>Last updated on 2020-11-3</em></div><div class="docs-prevnext"><a class="docs-prev button" href="/rdi/docs/next/the-container"><span class="arrow-prev">← </span><span>The Container</span></a><a class="docs-next button" href="/rdi/docs/next/debugging"><span>Debugging</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#configuring-a-service-with-annotations">Configuring a service with annotations</a></li><li><a href="#annotations-more-in-detail">Annotations more in detail</a></li><li><a href="#limitations">Limitations</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/rdi/" class="nav-home"><img src="/rdi/img/logo.png" alt="RDI Documentation"/></a><div><h5>Docs</h5><a href="/rdi/docs/en/intro">Introduction</a><a href="https://www.javadoc.io/doc/com.github.alex1304/rdi/latest/index.html">API reference (javadoc)</a></div><div><h5>More</h5><a href="https://github.com/Alex1304/rdi">GitHub</a><a class="github-button" href="https://github.com/Alex1304/rdi" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Alex1304 - Made with Docusaurus</section></footer></div></body></html>
