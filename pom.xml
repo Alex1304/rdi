@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.github.alex1304</groupId>
 	<artifactId>rdi</artifactId>
-	<version>1.1.0</version>
+	<version>1.1.1-SNAPSHOT</version>
 
 	<name>RDI</name>
 	<url>http://maven.apache.org</url>
