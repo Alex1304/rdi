@@ -1,5 +1,13 @@
 package com.github.alex1304.rdi.finder.annotation;
 
+import com.github.alex1304.rdi.RdiException;
+import com.github.alex1304.rdi.ServiceReference;
+import com.github.alex1304.rdi.config.FactoryMethod;
+import com.github.alex1304.rdi.config.Injectable;
+import com.github.alex1304.rdi.config.ServiceDescriptor;
+import com.github.alex1304.rdi.finder.ServiceFinder;
+import org.reactivestreams.Publisher;
+
 import java.lang.reflect.Executable;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -8,15 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import org.reactivestreams.Publisher;
-
-import com.github.alex1304.rdi.RdiException;
-import com.github.alex1304.rdi.ServiceReference;
-import com.github.alex1304.rdi.config.FactoryMethod;
-import com.github.alex1304.rdi.config.Injectable;
-import com.github.alex1304.rdi.config.ServiceDescriptor;
-import com.github.alex1304.rdi.finder.ServiceFinder;
 
 /**
  * A {@link ServiceFinder} that finds services from annotations, given a set of
@@ -72,7 +71,7 @@ public class AnnotationServiceFinder implements ServiceFinder {
 				.filter(m -> m.isAnnotationPresent(RdiFactory.class)
 						&& Modifier.isPublic(m.getModifiers())
 						&& Modifier.isStatic(m.getModifiers())
-						& Publisher.class.isAssignableFrom(m.getReturnType()) || m.getReturnType().equals(clazz))
+						&& (Publisher.class.isAssignableFrom(m.getReturnType()) || m.getReturnType().equals(clazz)))
 				.findFirst()
 				.map(m -> FactoryMethod.staticFactory(m.getName(), m.getReturnType(), paramsToInjectable(m)));
 	}
