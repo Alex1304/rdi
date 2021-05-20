@@ -2,55 +2,54 @@ package com.github.alex1304.rdi.resolver;
 
 import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
-
 import reactor.core.publisher.Mono;
 
 class ResolutionContext {
-	
-	private final ServiceDescriptor descriptor;
-	private Mono<Object> mono;
-	private Object singleton;
-	private ResolutionStep step = ResolutionStep.RESOLVING_FACTORY;
-	
-	public ResolutionContext(ServiceDescriptor descriptor) {
-		this.descriptor = descriptor;
-	}
-	
-	ServiceReference<?> getReference() {
-		return descriptor.getServiceReference();
-	}
 
-	ServiceDescriptor getDescriptor() {
-		return descriptor;
-	}
+    private final ServiceDescriptor descriptor;
+    private Mono<Object> mono;
+    private Object singleton;
+    private ResolutionStep step = ResolutionStep.RESOLVING_FACTORY;
 
-	Mono<Object> getMono() {
-		return mono;
-	}
+    public ResolutionContext(ServiceDescriptor descriptor) {
+        this.descriptor = descriptor;
+    }
 
-	void setMono(Mono<Object> mono) {
-		this.mono = mono;
-	}
+    ServiceReference<?> getReference() {
+        return descriptor.getServiceReference();
+    }
 
-	Object getSingleton() {
-		return singleton;
-	}
+    ServiceDescriptor getDescriptor() {
+        return descriptor;
+    }
 
-	void setSingleton(Object singleton) {
-		this.singleton = singleton;
-	}
+    Mono<Object> getMono() {
+        return mono;
+    }
 
-	ResolutionStep getStep() {
-		return step;
-	}
+    void setMono(Mono<Object> mono) {
+        this.mono = mono;
+    }
 
-	void setStep(ResolutionStep step) {
-		this.step = step;
-	}
+    Object getSingleton() {
+        return singleton;
+    }
 
-	@Override
-	public String toString() {
-		return "ResolutionContext{descriptor=" + descriptor + ", mono=" + mono + ", singleton=" + singleton + ", step="
-				+ step + "}";
-	}
+    void setSingleton(Object singleton) {
+        this.singleton = singleton;
+    }
+
+    ResolutionStep getStep() {
+        return step;
+    }
+
+    void setStep(ResolutionStep step) {
+        this.step = step;
+    }
+
+    @Override
+    public String toString() {
+        return "ResolutionContext{descriptor=" + descriptor + ", mono=" + mono + ", singleton=" + singleton + ", step="
+                + step + "}";
+    }
 }

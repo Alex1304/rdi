@@ -6,19 +6,19 @@ import java.lang.invoke.MethodType;
 import java.util.List;
 
 class ConstructorFactoryMethod extends AbstractFactoryMethod {
-	
-	ConstructorFactoryMethod(Class<?> owner, List<Injectable> constructorParams) {
-		super(owner, null, null, constructorParams);
-	}
 
-	@Override
-	MethodHandle findMethodHandle(Class<?> owner, String methodName, Class<?> returnType,
-			List<Class<?>> paramTypes) throws ReflectiveOperationException {
-		return MethodHandles.publicLookup().findConstructor(owner, MethodType.methodType(void.class, paramTypes));
-	}
+    ConstructorFactoryMethod(Class<?> owner, List<Injectable> constructorParams) {
+        super(owner, null, null, constructorParams);
+    }
 
-	@Override
-	String userFriendlyRepresentation(Class<?> owner, String methodName) {
-		return owner.getName() + ".<init>";
-	}
+    @Override
+    MethodHandle findMethodHandle(Class<?> owner, String methodName, Class<?> returnType,
+                                  List<Class<?>> paramTypes) throws ReflectiveOperationException {
+        return MethodHandles.publicLookup().findConstructor(owner, MethodType.methodType(void.class, paramTypes));
+    }
+
+    @Override
+    String userFriendlyRepresentation(Class<?> owner, String methodName) {
+        return owner.getName() + ".<init>";
+    }
 }
