@@ -1,6 +1,7 @@
 package com.github.alex1304.rdi.resolver;
 
 import com.github.alex1304.rdi.RdiException;
+import com.github.alex1304.rdi.ServiceInstantiationException;
 import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
 import com.github.alex1304.rdi.config.SetterMethod;
@@ -137,22 +138,24 @@ public class DependencyResolver {
                                    Map<RefWithParent, CycleDetector> instantiationChains) {
         rctx.setMono(
                 Mono.deferContextual(ctx -> {
-                    throwIfCycleDetected(rctx.getReference(),
-                            ctx.getOrDefault("parent", null),
-                            ctx.getOrDefault("grandParent", null),
-                            instantiationChains,
-                            () -> "Circular instantiation detected involving " + rctx.getReference()
-                                    + ". Maybe mark " + rctx.getReference() + " as singleton?");
-                    if (factoryResolution.hasNoDeps()) {
-                        return rctx.getDescriptor().getFactoryMethod().invoke();
-                    } else {
-                        return Mono.zip(factoryResolution.getResolved().stream()
-                                .map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx, rctx.getReference()))
-                                .collect(Collectors.toList()), Function.identity())
-                                .flatMap(rctx.getDescriptor().getFactoryMethod()::invoke);
-                    }
-                })
-                        .doOnNext(o -> logSubscription(rctx.getReference(), o, "New instance created")));
+                            throwIfCycleDetected(rctx.getReference(),
+                                    ctx.getOrDefault("parent", null),
+                                    ctx.getOrDefault("grandParent", null),
+                                    instantiationChains,
+                                    () -> "Circular instantiation detected involving " + rctx.getReference()
+                                            + ". Maybe mark " + rctx.getReference() + " as singleton?");
+                            if (factoryResolution.hasNoDeps()) {
+                                return rctx.getDescriptor().getFactoryMethod().invoke();
+                            } else {
+                                return Mono.zip(factoryResolution.getResolved().stream()
+                                                .map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx,
+                                                        rctx.getReference()))
+                                                .collect(Collectors.toList()), Function.identity())
+                                        .flatMap(rctx.getDescriptor().getFactoryMethod()::invoke);
+                            }
+                        })
+                        .doOnNext(o -> logSubscription(rctx.getReference(), o, "New instance created"))
+                        .onErrorMap(e -> new ServiceInstantiationException(rctx.getReference(), e)));
         if (rctx.getDescriptor().isSingleton()) {
             rctx.setMono(wrapSingleton(rctx));
         }
@@ -175,8 +178,17 @@ public class DependencyResolver {
                         isFreshInstance.set(false);
                         return Mono.just(o);
                     }
-                    return factoryMono.doOnNext(rctx::setSingleton).doOnNext(newInstance ->
-                            logSubscription(rctx.getReference(), newInstance, "Instantiated singleton, now caching"));
+                    Throwable t = rctx.getInstantiationError();
+                    if (t != null) {
+                        logSubscription(rctx.getReference(), null, "Obtained cached instantiation error: " + t);
+                        return Mono.error(t);
+                    }
+                    return factoryMono.doOnNext(rctx::setSingleton)
+                            .doOnNext(newInstance -> logSubscription(rctx.getReference(), newInstance,
+                                    "Instantiated singleton, now caching"))
+                            .doOnError(rctx::setInstantiationError)
+                            .doOnError(error -> logSubscription(rctx.getReference(), null,
+                                    "Caching instantiation error: " + error));
                 })
                 .doFinally(__ -> {
                     logSubscription(rctx.getReference(), null, "Released singleton lock");
@@ -189,41 +201,43 @@ public class DependencyResolver {
     private static void enrichMonoWithSetterResolution(ResolutionContext rctx, ResolutionResult setterResolution) {
         rctx.setMono(rctx.getMono()
                 .flatMap(o -> Mono.deferContextual(ctx -> {
-                    AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
-                    if (rctx.getDescriptor().getSetterMethods().isEmpty()) {
-                        logSubscription(rctx.getReference(), o, "No setters found");
-                        return Mono.empty();
-                    }
-                    if (!isFreshInstance.get()) {
-                        logSubscription(rctx.getReference(), o, "Ignoring setters as instance was obtained from cache");
-                        return Mono.empty();
-                    }
-                    Mono<Void> setterMono = Mono.zip(setterResolution.getResolved().stream()
-                            .map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx, rctx.getReference()))
-                            .collect(Collectors.toList()), Function.identity())
-                            .switchIfEmpty(Mono.fromCallable(() -> new Object[0]))
-                            .doOnNext(deps -> {
-                                int refI = 0;
-                                for (SetterMethod setter : rctx.getDescriptor().getSetterMethods()) {
-                                    if (setter.getInjectableParameter().getValue().isPresent()) {
-                                        setter.invoke(o);
-                                    } else if (setter.getInjectableParameter().getReference().isPresent()) {
-                                        setter.invoke(o, deps[refI++]);
-                                    } else {
-                                        throw new AssertionError("Injectable.getValue() and "
-                                                + "Injectable.getReference() were both empty");
-                                    }
-                                }
-                            })
-                            .then(Mono.fromRunnable(() -> logSubscription(rctx.getReference(), o, "Successfully " +
-                                    "invoked setters")));
-                    ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
-                    setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
-                    logSubscription(rctx.getReference(), o, "Setters found: their invocation will be deferred until " +
-                            "all "
-                            + "dependency instances are available");
-                    return Mono.empty();
-                })
+                            AtomicBoolean isFreshInstance = ctx.get("isFreshInstance");
+                            if (rctx.getDescriptor().getSetterMethods().isEmpty()) {
+                                logSubscription(rctx.getReference(), o, "No setters found");
+                                return Mono.empty();
+                            }
+                            if (!isFreshInstance.get()) {
+                                logSubscription(rctx.getReference(), o, "Ignoring setters as instance was obtained " +
+                                        "from cache");
+                                return Mono.empty();
+                            }
+                            Mono<Void> setterMono = Mono.zip(setterResolution.getResolved().stream()
+                                            .map(rctx0 -> putParentInSubscriberContext(rctx0.getMono(), ctx,
+                                                    rctx.getReference()))
+                                            .collect(Collectors.toList()), Function.identity())
+                                    .switchIfEmpty(Mono.fromCallable(() -> new Object[0]))
+                                    .doOnNext(deps -> {
+                                        int refI = 0;
+                                        for (SetterMethod setter : rctx.getDescriptor().getSetterMethods()) {
+                                            if (setter.getInjectableParameter().getValue().isPresent()) {
+                                                setter.invoke(o);
+                                            } else if (setter.getInjectableParameter().getReference().isPresent()) {
+                                                setter.invoke(o, deps[refI++]);
+                                            } else {
+                                                throw new AssertionError("Injectable.getValue() and "
+                                                        + "Injectable.getReference() were both empty");
+                                            }
+                                        }
+                                    })
+                                    .then(Mono.fromRunnable(() -> logSubscription(rctx.getReference(), o,
+                                            "Successfully " +
+                                                    "invoked setters")));
+                            ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
+                            setterDelegate.element().add(setterMono); // The deque cannot be empty at this stage
+                            logSubscription(rctx.getReference(), o, "Setters found: their invocation will be deferred" +
+                                    " until all dependency instances are available");
+                            return Mono.empty();
+                        })
                         .thenReturn(o)));
     }
 
@@ -232,14 +246,14 @@ public class DependencyResolver {
             rctx.setMono(rctx.getMono()
                     // Assemble code to execute all setter delegates
                     .flatMap(o -> Mono.deferContextual(ctx -> {
-                        ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
-                        List<Mono<Void>> setterMonos = setterDelegate.pop();
-                        if (setterDelegate.isEmpty()) {
-                            return Mono.when(setterMonos);
-                        }
-                        setterDelegate.element().addAll(setterMonos);
-                        return Mono.empty();
-                    })
+                                ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.get("setterDelegate");
+                                List<Mono<Void>> setterMonos = setterDelegate.pop();
+                                if (setterDelegate.isEmpty()) {
+                                    return Mono.when(setterMonos);
+                                }
+                                setterDelegate.element().addAll(setterMonos);
+                                return Mono.empty();
+                            })
                             .thenReturn(o))
                     .doOnNext(o -> logSubscription(rctx.getReference(), o, "Returning instance"))
                     // Initialize subscriber context
@@ -283,7 +297,9 @@ public class DependencyResolver {
 
     private static void logSubscription(ServiceReference<?> ref, Object instance, String message) {
         if (instance != null) {
-            LOGGER_SUBSCRIPTION.debug("[serviceRef={}, instance={}] {}", ref, instance, message);
+            LOGGER_SUBSCRIPTION.debug("[serviceRef={}, instance={}{}] {}", ref, instance.toString()
+                    .substring(0, Math.min(instance.toString().length(), 1000)), instance.toString().length() > 1000
+                    ? "..." : "", message);
         } else {
             LOGGER_SUBSCRIPTION.debug("[serviceRef={}] {}", ref, message);
         }

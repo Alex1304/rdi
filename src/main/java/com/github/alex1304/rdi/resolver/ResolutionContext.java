@@ -9,6 +9,7 @@ class ResolutionContext {
     private final ServiceDescriptor descriptor;
     private Mono<Object> mono;
     private Object singleton;
+    private Throwable instantiationError;
     private ResolutionStep step = ResolutionStep.RESOLVING_FACTORY;
 
     public ResolutionContext(ServiceDescriptor descriptor) {
@@ -39,6 +40,14 @@ class ResolutionContext {
         this.singleton = singleton;
     }
 
+    Throwable getInstantiationError() {
+        return instantiationError;
+    }
+
+    void setInstantiationError(Throwable instantiationError) {
+        this.instantiationError = instantiationError;
+    }
+
     ResolutionStep getStep() {
         return step;
     }
@@ -49,7 +58,12 @@ class ResolutionContext {
 
     @Override
     public String toString() {
-        return "ResolutionContext{descriptor=" + descriptor + ", mono=" + mono + ", singleton=" + singleton + ", step="
-                + step + "}";
+        return "ResolutionContext{" +
+                "descriptor=" + descriptor +
+                ", mono=" + mono +
+                ", singleton=" + singleton +
+                ", instantiationError=" + instantiationError +
+                ", step=" + step +
+                '}';
     }
 }

@@ -25,9 +25,7 @@ public interface RdiServiceContainer {
      */
     static RdiServiceContainer create(RdiConfig config) {
         requireNonNull(config);
-        return new DefaultRdiServiceContainer(
-                DependencyResolver.resolve(
-                        config.getServiceDescriptors()));
+        return new DefaultRdiServiceContainer(DependencyResolver.resolve(config.getServiceDescriptors()));
     }
 
     /**
@@ -39,7 +37,9 @@ public interface RdiServiceContainer {
      *
      * @param <S>        the type of service
      * @param serviceRef the service reference
-     * @return a Mono emitting the Service instance
+     * @return a Mono emitting the Service instance. If the instantiation of the service fails, it will error with
+     * {@link ServiceInstantiationException}. If a circular dependency is found when injecting setter dependencies, it
+     * will error with {@link RdiException}.
      */
     <S> Mono<S> getService(ServiceReference<S> serviceRef);
 

@@ -19,8 +19,11 @@ class RdiServiceContainerTest {
 
     private static final ServiceReference<A> A = ServiceReference.of("A", A.class);
     private static final ServiceReference<B> B = ServiceReference.of("B", B.class);
+    private static final ServiceReference<C> C = ServiceReference.of("C", C.class);
+    private static final ServiceReference<D> D = ServiceReference.of("D", D.class);
     private static RdiConfig conf1, conf2, conf3, conf4, conf5, conf6,
-            conf7, conf8, conf9, conf10, conf11, conf12;
+            conf7, conf8, conf9, conf10, conf11, conf12, conf13;
+    private static int D_INSTANCE_COUNT = 0;
 
     @BeforeAll
     static void setUpBeforeClass() {
@@ -42,7 +45,7 @@ class RdiServiceContainerTest {
                 .registerService(ServiceDescriptor.builder(A)
                         .setFactoryMethod(constructor(ref(B)))
                         .build())
-                .registerService(ServiceDescriptor.builder(B).build())
+                .registerService(ServiceDescriptor.standalone(B))
                 .build();
         conf5 = RdiConfig.builder()
                 .registerService(ServiceDescriptor.builder(A)
@@ -93,7 +96,7 @@ class RdiServiceContainerTest {
                 .registerService(ServiceDescriptor.builder(A)
                         .setFactoryMethod(constructor(ref(B), value(1304)))
                         .build())
-                .registerService(ServiceDescriptor.builder(B).build())
+                .registerService(ServiceDescriptor.standalone(B))
                 .build();
         conf12 = RdiConfig.builder()
                 .registerService(ServiceDescriptor.builder(B)
@@ -102,11 +105,17 @@ class RdiServiceContainerTest {
                                 value(1304)))
                         .build())
                 .build();
+        conf13 = RdiConfig.builder()
+                .registerService(ServiceDescriptor.builder(C)
+                        .setFactoryMethod(constructor(ref(D)))
+                        .build())
+                .registerService(ServiceDescriptor.standalone(D))
+                .build();
     }
 
-    private static void logExpectedException(Logger logger, RdiException e) {
-        logger.info("RdiException thrown as expected with message: {}{}", e.getMessage(),
-                e.getCause() != null ? ", caused by " + e.getCause() : "");
+    private static void logExpectedException(Logger logger, Throwable t) {
+        logger.info("Exception thrown as expected with message: {}{}", t.getMessage(),
+                t.getCause() != null ? ", caused by " + t.getCause() : "");
     }
 
     @Test
@@ -148,7 +157,7 @@ class RdiServiceContainerTest {
             assertNotNull(a);
             assertNotNull(a.b);
             assertNotNull(a.b.a);
-            assertTrue(a == a.b.a); // A is singleton so should be the same instance
+            assertSame(a, a.b.a); // A is singleton so should be the same instance
         });
     }
 
@@ -160,7 +169,7 @@ class RdiServiceContainerTest {
             assertNotNull(a);
             assertNotNull(a.b);
             assertNotNull(a.b.a);
-            assertTrue(a == a.b.a); // A is singleton so should be the same instance
+            assertSame(a, a.b.a); // A is singleton so should be the same instance
         });
     }
 
@@ -172,8 +181,8 @@ class RdiServiceContainerTest {
             assertNotNull(a);
             assertNotNull(a.b);
             assertNotNull(a.b.a);
-            assertFalse(a == a.b.a); // A is NOT singleton so should be DIFFERENT instances
-            assertTrue(a.b == a.b.a.b); // B however is a singleton so both A instances should share the same B
+            assertNotSame(a, a.b.a); // A is NOT singleton so should be DIFFERENT instances
+            assertSame(a.b, a.b.a.b); // B however is a singleton so both A instances should share the same B
         });
     }
 
@@ -225,6 +234,36 @@ class RdiServiceContainerTest {
         });
     }
 
+    @Test
+    void testCannotConstructD() {
+        Throwable t = assertThrows(ServiceInstantiationException.class, () -> {
+            RdiServiceContainer cont = RdiServiceContainer.create(conf13);
+            cont.getService(D).block();
+        });
+        logExpectedException(Loggers.getLogger("testCannotConstructD"), t);
+    }
+
+    @Test
+    void testCannotConstructCBecauseDFails() {
+        Throwable t = assertThrows(ServiceInstantiationException.class, () -> {
+            RdiServiceContainer cont = RdiServiceContainer.create(conf13);
+            cont.getService(C).block();
+        });
+        logExpectedException(Loggers.getLogger("testCannotConstructCBecauseDFails"), t);
+    }
+
+    @Test
+    void testErrorCachesProperly() {
+        assertDoesNotThrow(() -> {
+            RdiServiceContainer cont = RdiServiceContainer.create(conf13);
+            assertSame(D_INSTANCE_COUNT, 0);
+            cont.getService(D).onErrorResume(ServiceInstantiationException.class, e -> Mono.empty()).block();
+            assertSame(D_INSTANCE_COUNT, 1);
+            cont.getService(D).onErrorResume(ServiceInstantiationException.class, e -> Mono.empty()).block();
+            assertSame(D_INSTANCE_COUNT, 1);
+        });
+    }
+
     public static class A {
 
         private B b;
@@ -269,11 +308,26 @@ class RdiServiceContainerTest {
         }
 
         public static Mono<B> create(String value1, int value2) {
-            return Mono.fromCallable(() -> new B());
+            return Mono.fromCallable(B::new);
         }
 
         public void setA(A a) {
             this.a = a;
+        }
+    }
+
+    public static class C {
+
+        public C(D d) {
+
+        }
+    }
+
+    public static class D {
+
+        public D() {
+            D_INSTANCE_COUNT++;
+            throw new RuntimeException("Oops! Cannot construct D!");
         }
     }
 }
