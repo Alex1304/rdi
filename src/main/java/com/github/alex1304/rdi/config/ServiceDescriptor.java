@@ -2,7 +2,7 @@ package com.github.alex1304.rdi.config;
 
 import com.github.alex1304.rdi.RdiException;
 import com.github.alex1304.rdi.ServiceReference;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -157,7 +157,7 @@ public class ServiceDescriptor {
         private final ServiceReference<?> ref;
         private final Function<Class<?>, FactoryMethod> defaultFactoryMethod;
         private final List<Function<Class<?>, SetterMethod>> setterMethods = new ArrayList<>();
-        private Class<?> concreteType;
+        private @Nullable Class<?> concreteType;
         private boolean isSingleton = true;
         private Function<Class<?>, ? extends FactoryMethod> factoryMethod;
 

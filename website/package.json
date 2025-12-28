@@ -1,15 +1,24 @@
 {
-  "scripts": {
-    "examples": "docusaurus-examples",
-    "start": "docusaurus-start",
-    "build": "docusaurus-build",
-    "publish-gh-pages": "docusaurus-publish",
-    "write-translations": "docusaurus-write-translations",
-    "version": "docusaurus-version",
-    "rename-version": "docusaurus-rename-version"
-  },
-  "devDependencies": {
-    "docusaurus": "^1.14.4"
-  },
-  "version": "1.0.1"
+    "scripts": {
+        "examples": "docusaurus-examples",
+        "start": "docusaurus start",
+        "build": "docusaurus build",
+        "publish-gh-pages": "docusaurus-publish",
+        "write-translations": "docusaurus-write-translations",
+        "version": "docusaurus-version",
+        "rename-version": "docusaurus-rename-version",
+        "swizzle": "docusaurus swizzle",
+        "deploy": "docusaurus deploy",
+        "docusaurus": "docusaurus"
+    },
+    "devDependencies": {},
+    "version": "1.0.1",
+    "dependencies": {
+        "@docusaurus/core": "3.9.2",
+        "@docusaurus/preset-classic": "3.9.2",
+        "@mdx-js/react": "^3.0.0",
+        "clsx": "^1.1.1",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    }
 }

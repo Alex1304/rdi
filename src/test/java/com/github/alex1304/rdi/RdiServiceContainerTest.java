@@ -256,11 +256,11 @@ class RdiServiceContainerTest {
     void testErrorCachesProperly() {
         assertDoesNotThrow(() -> {
             RdiServiceContainer cont = RdiServiceContainer.create(conf13);
-            assertSame(D_INSTANCE_COUNT, 0);
+            assertSame(0, D_INSTANCE_COUNT);
             cont.getService(D).onErrorResume(ServiceInstantiationException.class, e -> Mono.empty()).block();
-            assertSame(D_INSTANCE_COUNT, 1);
+            assertSame(1, D_INSTANCE_COUNT);
             cont.getService(D).onErrorResume(ServiceInstantiationException.class, e -> Mono.empty()).block();
-            assertSame(D_INSTANCE_COUNT, 1);
+            assertSame(1, D_INSTANCE_COUNT);
         });
     }
 

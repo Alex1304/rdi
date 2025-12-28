@@ -21,8 +21,8 @@ class AnnotationServiceFinderTest {
         RdiServiceContainer container = RdiServiceContainer.create(config);
         A a = container.getService(ServiceReference.ofType(A.class)).block();
         assertNotNull(a);
-        assertEquals(a.getFoo(), "hello");
-        assertEquals(a.getBar(), 42);
+        assertEquals("hello", a.getFoo());
+        assertEquals(42, a.getBar());
         assertNotNull(a.getB());
         assertNotNull(a.getB().getC());
         Shape shape = container.getService(ServiceReference.ofType(Shape.class)).block();

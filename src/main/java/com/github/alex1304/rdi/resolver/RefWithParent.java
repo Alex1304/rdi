@@ -1,24 +1,25 @@
 package com.github.alex1304.rdi.resolver;
 
 import com.github.alex1304.rdi.ServiceReference;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
 class RefWithParent {
 
-    private final ServiceReference<?> parent;
-    private final ServiceReference<?> element;
+    private final @Nullable ServiceReference<?> parent;
+    private final @Nullable ServiceReference<?> element;
 
-    RefWithParent(ServiceReference<?> parent, ServiceReference<?> element) {
+    RefWithParent(@Nullable ServiceReference<?> parent, @Nullable ServiceReference<?> element) {
         this.parent = parent;
         this.element = element;
     }
 
-    ServiceReference<?> getParent() {
+    @Nullable ServiceReference<?> getParent() {
         return parent;
     }
 
-    ServiceReference<?> getElement() {
+    @Nullable ServiceReference<?> getElement() {
         return element;
     }
 

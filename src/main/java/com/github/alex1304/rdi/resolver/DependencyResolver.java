@@ -5,6 +5,7 @@ import com.github.alex1304.rdi.ServiceInstantiationException;
 import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
 import com.github.alex1304.rdi.config.SetterMethod;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.Logger;
@@ -50,7 +51,7 @@ public class DependencyResolver {
         Map<RefWithParent, CycleDetector> dependencyChains = new ConcurrentHashMap<>();
         Map<RefWithParent, CycleDetector> instantiationChains = new ConcurrentHashMap<>();
         stack.addAll(resolutionContextByRef.keySet().stream()
-                .peek(ref -> throwIfCycleDetected(ref, null, null, dependencyChains, null)) // Should never throw,
+                .peek(ref -> throwIfCycleDetected(ref, null, null, dependencyChains, () -> "")) // Should never throw,
                 // just initialize the chains
                 .map(ref -> new RefWithParent(null, ref))
                 .collect(Collectors.toList()));
@@ -261,6 +262,7 @@ public class DependencyResolver {
                         logSubscription(rctx.getReference(), null, "Subscription triggered");
                         ArrayDeque<List<Mono<Void>>> setterDelegate = ctx.getOrDefault("setterDelegate",
                                 new ArrayDeque<>());
+                        Objects.requireNonNull(setterDelegate);
                         setterDelegate.push(new ArrayList<>());
                         return ctx.put("setterDelegate", setterDelegate)
                                 .put("isFreshInstance", new AtomicBoolean(true));
@@ -281,9 +283,10 @@ public class DependencyResolver {
         });
     }
 
-    private static void throwIfCycleDetected(ServiceReference<?> ref, ServiceReference<?> parent,
-                                             ServiceReference<?> grandParent,
-                                             Map<RefWithParent, CycleDetector> chains, Supplier<String> errorMessage) {
+    private static void throwIfCycleDetected(ServiceReference<?> ref, @Nullable ServiceReference<?> parent,
+                                             @Nullable ServiceReference<?> grandParent,
+                                             Map<RefWithParent, CycleDetector> chains,
+                                             Supplier<String> errorMessage) {
         RefWithParent parentRWP = new RefWithParent(grandParent, parent);
         RefWithParent thisRWP = new RefWithParent(parent, ref);
         CycleDetector cycleDetector = chains.getOrDefault(parentRWP, new CycleDetector());
@@ -295,7 +298,7 @@ public class DependencyResolver {
         }
     }
 
-    private static void logSubscription(ServiceReference<?> ref, Object instance, String message) {
+    private static void logSubscription(ServiceReference<?> ref, @Nullable Object instance, String message) {
         if (instance != null) {
             LOGGER_SUBSCRIPTION.debug("[serviceRef={}, instance={}{}] {}", ref, instance.toString()
                     .substring(0, Math.min(instance.toString().length(), 1000)), instance.toString().length() > 1000

@@ -1,6 +1,7 @@
 package com.github.alex1304.rdi.config;
 
 import com.github.alex1304.rdi.RdiException;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -12,12 +13,12 @@ import java.util.Map.Entry;
 abstract class AbstractFactoryMethod implements FactoryMethod {
 
     private final Class<?> owner;
-    private final String methodName;
-    private final Class<?> returnType;
+    private final @Nullable String methodName;
+    private final @Nullable Class<?> returnType;
     private final List<Injectable> params;
     private final MethodHandle methodHandle;
 
-    AbstractFactoryMethod(Class<?> owner, String methodName, Class<?> returnType, List<Injectable> params) {
+    AbstractFactoryMethod(Class<?> owner, @Nullable String methodName, @Nullable Class<?> returnType, List<Injectable> params) {
         this.owner = owner;
         this.methodName = methodName;
         this.returnType = returnType;
@@ -34,6 +35,7 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
         return Mono.defer(() -> {
             try {
                 if (Publisher.class.isAssignableFrom(methodHandle.type().returnType())) {
+                    //noinspection unchecked
                     return Mono.from((Publisher<Object>) asGenericSpreader(methodHandle, args.length).invoke(args))
                             .switchIfEmpty(Mono.error(() -> new RdiException("Reactive factory " +
                                     userFriendlyRepresentation(owner, methodName) + " completed empty")));
@@ -51,7 +53,7 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
         return Collections.unmodifiableList(params);
     }
 
-    abstract MethodHandle findMethodHandle(Class<?> owner, String methodName, Class<?> returnType,
+    abstract MethodHandle findMethodHandle(Class<?> owner, @Nullable String methodName, @Nullable Class<?> returnType,
                                            List<Class<?>> paramTypes) throws ReflectiveOperationException;
 
     private MethodHandle prepareMethodHandle() {
@@ -75,7 +77,7 @@ abstract class AbstractFactoryMethod implements FactoryMethod {
         }
     }
 
-    abstract String userFriendlyRepresentation(Class<?> owner, String methodName);
+    abstract String userFriendlyRepresentation(Class<?> owner, @Nullable String methodName);
 
     @Override
     public String toString() {

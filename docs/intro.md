@@ -4,7 +4,7 @@ title: Introduction to RDI
 sidebar_label: Introduction
 ---
 
-<img align="right" src="/rdi/img/logo.png" width=20% />
+<img align="right" src="/rdi/img/logo.png" width="20%" />
 
 ## What is RDI?
 

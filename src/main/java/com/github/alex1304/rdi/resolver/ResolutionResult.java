@@ -29,7 +29,7 @@ class ResolutionResult {
                         + "' is referring to missing service '" + dep.getServiceName()
                         + "'. Did you forget to register '" + dep.getServiceName() + "' in the config?");
             }
-            if (rctx.getMono() != null) {
+            if (rctx.hasMono()) {
                 resolved.add(rctx);
             } else {
                 unresolved.add(dep);

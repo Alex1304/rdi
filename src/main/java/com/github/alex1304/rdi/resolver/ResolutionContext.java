@@ -2,14 +2,17 @@ package com.github.alex1304.rdi.resolver;
 
 import com.github.alex1304.rdi.ServiceReference;
 import com.github.alex1304.rdi.config.ServiceDescriptor;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
+
+import java.util.Objects;
 
 class ResolutionContext {
 
     private final ServiceDescriptor descriptor;
-    private Mono<Object> mono;
-    private Object singleton;
-    private Throwable instantiationError;
+    private @Nullable Mono<Object> mono;
+    private @Nullable Object singleton;
+    private @Nullable Throwable instantiationError;
     private ResolutionStep step = ResolutionStep.RESOLVING_FACTORY;
 
     public ResolutionContext(ServiceDescriptor descriptor) {
@@ -24,15 +27,19 @@ class ResolutionContext {
         return descriptor;
     }
 
+    boolean hasMono() {
+        return mono != null;
+    }
+
     Mono<Object> getMono() {
-        return mono;
+        return Objects.requireNonNull(mono);
     }
 
     void setMono(Mono<Object> mono) {
         this.mono = mono;
     }
 
-    Object getSingleton() {
+    @Nullable Object getSingleton() {
         return singleton;
     }
 
@@ -40,7 +47,7 @@ class ResolutionContext {
         this.singleton = singleton;
     }
 
-    Throwable getInstantiationError() {
+    @Nullable Throwable getInstantiationError() {
         return instantiationError;
     }
 
